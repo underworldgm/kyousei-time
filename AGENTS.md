@@ -5,7 +5,9 @@
 子どもの歯科矯正器具の装着時間を記録するモバイル向けWebアプリです。
 詳細な仕様、実装済み機能、確認項目は `CLAUDE.md` にまとまっています。作業前に必ず両方を読んでください。
 
-## 構成
+> 現在は React/TS/Vite 構成 (`src/`)。旧版は `legacy/`。確認は `npm run lint && npm test && npm run build`。詳細は README.md / docs/HANDOFF.md。
+
+## 構成(旧版)
 
 - `index.html`: 設定・時間・カレンダーの3画面
 - `styles.css`: モバイル向けレイアウトとデザイン
