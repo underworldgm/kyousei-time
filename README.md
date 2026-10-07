@@ -95,7 +95,7 @@ Web Notifications を使用 (HTTPS または localhost 必須)。設定で ON �
 閉じている間も確実に通知するには **Web Push** が必要です。将来: Supabase Edge Function + `push_subscriptions` テーブル + VAPID 鍵で、装着開始時に「終了予定時刻」の通知をサーバー側で予約し、SW の `push` イベントで表示します (終了予定は `expectedGoalTime` で計算済み)。
 
 ## デプロイ
-`npm run build` の `dist/` を Vercel / Cloudflare Pages / Netlify に配置 (SPA フォールバック: `vercel.json`, `public/_redirects` 同梱)。環境変数 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` を設定。Supabase の Redirect URL にデプロイ先を追加。
+`npm run build` の `dist/` を Vercel / Cloudflare Pages / Netlify に配置。SPA フォールバック (`vercel.json`, `public/_redirects`) と、`sw.js`・`index.html` を毎回確認させるキャッシュ設定 (`public/_headers`, `vercel.json`) を同梱しているので、新しい版を出すと次回起動時に自動で更新されます。ビルド設定: コマンド `npm run build`、出力 `dist`、Node 20 以上。環境変数 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` を設定。Supabase の Redirect URL にデプロイ先を追加。
 
 ## テスト
 - `npm test` (Vitest): 下記の単体・同期テストに加え、`supabase/migrations` を PGlite (WASM 版 PostgreSQL) で実行して LWW トリガー・RLS・制約・クライアント同期との噛み合わせを検証
