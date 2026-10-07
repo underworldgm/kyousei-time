@@ -103,6 +103,18 @@ export function TimerPage() {
           今日の装着 <strong>{fmtDuration(sum.totalMinutes)}</strong> / {fmtDuration(targetMinutes, { short: true })}
         </p>
 
+        <button type="button" className={`btn-main ${wearing ? "stop" : "start"}`} onClick={toggle} disabled={busy} aria-pressed={wearing}>
+          <span className="btn-glyph" aria-hidden="true">
+            {wearing ? "■" : "▶"}
+          </span>
+          {wearing ? "装着終了" : "装着開始"}
+        </button>
+        {msg && (
+          <p className="form-error" role="alert">
+            ⚠ {msg}
+          </p>
+        )}
+
         <section className={`card status-card ${wearing ? "on" : "off"}`} aria-label="現在の状態">
           <h2 className="status-title">
             <span aria-hidden="true">{wearing ? "●" : "○"}</span> 現在：{wearing ? "装着中" : "外しています"}
@@ -159,18 +171,6 @@ export function TimerPage() {
               今日の目標を達成しました{sum.overMinutes > 0 ? `（+${sum.overMinutes}分）` : ""}
             </p>
           </section>
-        )}
-
-        <button type="button" className={`btn-main ${wearing ? "stop" : "start"}`} onClick={toggle} disabled={busy} aria-pressed={wearing}>
-          <span className="btn-glyph" aria-hidden="true">
-            {wearing ? "■" : "▶"}
-          </span>
-          {wearing ? "装着終了" : "装着開始"}
-        </button>
-        {msg && (
-          <p className="form-error" role="alert">
-            ⚠ {msg}
-          </p>
         )}
 
         <section className="records" aria-labelledby="records-title">

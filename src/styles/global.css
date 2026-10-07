@@ -157,7 +157,7 @@ ul {
 }
 .goal-chip strong {
   font-size: 17px;
-  color: #c68a00;
+  color: #8a5d00;
 }
 
 .sync-badge {
@@ -246,7 +246,7 @@ ul {
   margin-left: 6px;
   padding: 0 8px;
   border-radius: var(--radius-pill);
-  background: var(--coral);
+  background: #c63d30;
   color: #fff;
   font-size: 11px;
   font-weight: 800;
@@ -395,13 +395,13 @@ ul {
   gap: 1px;
   min-height: 52px;
   border-radius: 16px;
-  color: #6a7a90;
+  color: #56647a;
   font-size: 11px;
   font-weight: 700;
   text-decoration: none;
 }
 .nav-item.active {
-  color: #168d79;
+  color: #0d6b5b;
   background: var(--mint-soft);
 }
 .nav-item.active span {
@@ -420,10 +420,17 @@ ul {
 }
 .ring {
   position: relative;
+  /* 画面の高さに合わせて縮める (iPhone SE でも装着ボタンが最初の画面に入るように) */
+  width: min(248px, 64vw, 33vh) !important;
+  height: auto !important;
+  aspect-ratio: 1;
+  container-type: inline-size;
   filter: drop-shadow(0 8px 14px rgba(56, 197, 173, 0.18));
 }
 .ring svg {
   display: block;
+  width: 100%;
+  height: auto;
 }
 .ring-inner {
   position: absolute;
@@ -460,18 +467,20 @@ ul {
 }
 .ring-big {
   font-size: 31px;
+  font-size: clamp(20px, 12.4cqw, 31px);
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: 0.01em;
 }
 .ring-big.done {
   font-size: 22px;
+  font-size: clamp(16px, 8.8cqw, 22px);
   color: #137a68;
 }
 .ring-over {
   font-size: 15px;
   font-weight: 800;
-  color: #c68a00;
+  color: #8a5d00;
 }
 .ring.achieved svg circle:nth-of-type(1) {
   stroke: #ffe8a3;
@@ -571,7 +580,7 @@ ul {
 }
 .celebrate-card strong {
   font-size: 18px;
-  color: #b27a00;
+  color: #8a5d00;
 }
 
 .records h2,
@@ -654,7 +663,7 @@ ul {
 .streak-n {
   font-size: 20px;
   font-weight: 800;
-  color: #a97500;
+  color: #8a5d00;
 }
 .install-card {
   display: flex;
@@ -707,10 +716,10 @@ ul {
   font-weight: 800;
 }
 .d0 {
-  color: #e0584b;
+  color: #c63d30;
 }
 .d6 {
-  color: #2f7fd0;
+  color: #2366b5;
 }
 .cal-dow:not(.d0):not(.d6) {
   color: var(--navy);
@@ -745,8 +754,8 @@ ul {
   background: #6573e8;
   color: #fff;
 }
-.cal-day.future {
-  opacity: 0.55;
+.cal-day.future .cal-num {
+  font-weight: 500;
 }
 .stamp {
   width: 24px;
@@ -835,7 +844,7 @@ ul {
   color: #137a68;
 }
 .detail-kv .ng {
-  color: #b86a00;
+  color: #94560a;
 }
 .detail-kv small {
   display: block;
@@ -1250,9 +1259,6 @@ input[type="time"] {
   }
   .detail-kv dd.big {
     font-size: 17px;
-  }
-  .ring-big {
-    font-size: 27px;
   }
   .cal-day {
     min-height: 46px;

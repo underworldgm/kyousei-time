@@ -16,7 +16,7 @@ export function Ring({ progress, achieved, size = 248, children }: Props) {
   const ky = size / 2 + r * Math.sin(angle);
   return (
     <div className={`ring${achieved ? " achieved" : ""}`} style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+      <svg viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
         <defs>
           <linearGradient id="ring-g" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#5fd8c2" />

@@ -97,6 +97,10 @@ Web Notifications を使用 (HTTPS または localhost 必須)。設定で ON �
 `npm run build` の `dist/` を Vercel / Cloudflare Pages / Netlify に配置 (SPA フォールバック: `vercel.json`, `public/_redirects` 同梱)。環境変数 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` を設定。Supabase の Redirect URL にデプロイ先を追加。
 
 ## テスト
+- `npm test` (Vitest): 下記の単体・同期テストに加え、`supabase/migrations` を PGlite (WASM 版 PostgreSQL) で実行して LWW トリガー・RLS・制約・クライアント同期との噛み合わせを検証
+- `npm run e2e` (Playwright): 本番ビルドを起動し、iPhone SE / iPhone 15 サイズで 装着開始→リロード復元・連打・手動追加/編集/削除・オフライン起動と記録・CSV 復元とカレンダー・横スクロールなし・44px タップ領域・axe によるアクセシビリティ (重大違反ゼロ) を確認。初回のみ `npx playwright install chromium`
+- CI: `.github/workflows/ci.yml` が push / PR ごとに lint・test・build・e2e を実行
+
 `npm test` — 目標履歴、CSV 書き出し→復元の往復・重複防止、押しまちがい防止、時間計算 (14時間目標・複数セッション・日付またぎ・達成/未達成・再装着の終了予定)、カレンダー集計・達成判定、入力検証、オフライン保存、outbox 同期・冪等性・LWW・論理削除・複数端末マージ。
 
 ## CT303 への引き継ぎ
