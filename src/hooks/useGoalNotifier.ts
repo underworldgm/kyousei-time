@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { getMeta, setMeta } from "../db/indexedDb";
+import { db } from "../db/indexedDb";
 import { notifyGoalReached } from "../lib/notifications";
 import { summarizeDay } from "../lib/time";
 import type { AppData } from "../app/AppData";
@@ -18,9 +18,13 @@ export function useGoalNotifier(d: AppData) {
     let cancelled = false;
     void (async () => {
       try {
-        if (await getMeta<boolean>(key)) return;
-        await setMeta(key, true); // 先に記録して二重通知を防ぐ
-        if (!cancelled) await notifyGoalReached();
+        // 「通知済みか確認 → 記録」を1つのトランザクションで行い、再描画や複数タブでも1日1回にする
+        const first = await db.transaction("rw", db.meta, async () => {
+          if (await db.meta.get(key)) return false;
+          await db.meta.put({ key, value: true });
+          return true;
+        });
+        if (first && !cancelled) await notifyGoalReached();
       } catch {
         /* 通知できなくてもアプリは続行 */
       }
