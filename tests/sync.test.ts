@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "../src/db/indexedDb";
 import {
-  addSession, adoptAuthUser, deleteSession, ensureBootstrap, listSessions, saveSettings, startWear, stopWear, updateSession,
+  addSession, adoptAuthUser, deleteSession, ensureBootstrap, getIdentity, listSessions, markSignedOut, saveSettings, startWear, stopWear, updateSession,
 } from "../src/db/repo";
 import { syncOnce, toRemote, type Remote, type RemoteRow } from "../src/lib/sync";
 import type { TableName } from "../src/types";
@@ -211,12 +211,62 @@ describe("複数端末", () => {
     expect(server.tables.settings.get(UID)!.daily_target_minutes).toBe(600);
   });
 
-  it("別アカウントでログインしたら前のアカウントのローカルデータを破棄する", async () => {
+  it("別アカウント: 同期済みなら前のデータを破棄して切り替え、未同期があれば切り替えない", async () => {
+    const OTHER = "33333333-3333-4333-8333-333333333333";
     await adoptAuthUser(UID);
     await addSession(at("08:00"), at("09:00"), at("10:00"));
-    const r = await adoptAuthUser("33333333-3333-4333-8333-333333333333");
+    // 未同期の記録がある → データ保護のため切り替えない
+    expect(await adoptAuthUser(OTHER)).toEqual({ switched: false, blocked: true });
+    expect(await listSessions()).toHaveLength(1);
+    expect((await getIdentity()).userId).toBe(UID);
+    // 同期が済めば切り替えられる
+    await syncOnce(new FakeServer(), UID);
+    const r = await adoptAuthUser(OTHER);
     expect(r.switched).toBe(true);
     expect(await listSessions()).toHaveLength(0);
+    expect((await getIdentity()).userId).toBe(OTHER);
+  });
+
+  it("ログアウト後に別アカウントでログインしても、前のアカウントの記録は移らない", async () => {
+    const OTHER = "44444444-4444-4444-8444-444444444444";
+    const server = new FakeServer();
+    await adoptAuthUser(UID);
+    await addSession(at("08:00"), at("09:00"), at("10:00"));
+    await syncOnce(server, UID);
+    await markSignedOut();
+    expect((await getIdentity()).authenticated).toBe(false);
+    await adoptAuthUser(OTHER);
+    await syncOnce(server, OTHER);
+    expect(await listSessions()).toHaveLength(0);
+    expect([...server.tables.sessions.values()].every((r) => r.user_id === UID)).toBe(true);
+  });
+
+  it("ログアウト中の記録は端末に残り、同じアカウントで再ログインすると同期される", async () => {
+    const server = new FakeServer();
+    await adoptAuthUser(UID);
+    await syncOnce(server, UID);
+    await markSignedOut();
+    await ensureBootstrap(); // ログアウト後のアプリ再起動
+    expect(await db.settings.count()).toBe(1);
+    expect(await db.profiles.count()).toBe(1);
+    await addSession(at("08:00"), at("09:00"), at("10:00")); // ログアウト中 (オフライン利用)
+    expect(server.tables.sessions.size).toBe(0);
+    const r = await adoptAuthUser(UID);
+    expect(r).toEqual({ switched: false });
+    await syncOnce(server, UID);
+    expect(server.tables.sessions.size).toBe(1);
+    expect([...server.tables.sessions.values()][0].user_id).toBe(UID);
+  });
+
+  it("ログイン処理が同時に2回呼ばれても記録は重複・消失しない", async () => {
+    await addSession(at("08:00"), at("09:00"), at("10:00"));
+    await addSession(at("11:00"), at("12:00"), at("13:00"));
+    await Promise.all([adoptAuthUser(UID), adoptAuthUser(UID), adoptAuthUser(UID)]);
+    const list = await listSessions();
+    expect(list).toHaveLength(2);
+    expect(list.every((s) => s.userId === UID && s.childId === UID)).toBe(true);
+    expect(await db.children.count()).toBe(1);
+    expect(await db.settings.count()).toBe(1);
   });
 });
 

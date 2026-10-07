@@ -39,6 +39,17 @@ const nowIso = (now = Date.now()) => new Date(now).toISOString();
 
 // ---------------------------------------------------------------- identity / bootstrap
 
+/**
+ * ログアウト: 同期を止める。記録は端末に残し (オフラインで使い続けられる)、
+ * 同じアカウントで再ログインすると未同期分も含めて同期を再開する。
+ */
+export async function markSignedOut(): Promise<void> {
+  const cur = await getIdentity();
+  if (!cur.authenticated) return;
+  await setMeta("identity", { ...cur, authenticated: false } satisfies Identity);
+  emitWrite();
+}
+
 export async function getIdentity(): Promise<Identity> {
   const saved = await getMeta<Identity>("identity");
   return saved ?? { userId: LOCAL_USER_ID, childId: DEFAULT_CHILD_ID, authenticated: false };
@@ -53,14 +64,16 @@ export async function ensureBootstrap(): Promise<Identity> {
   await db.transaction("rw", [db.profiles, db.children, db.settings, db.meta], async () => {
     if (!(await getMeta("identity"))) await setMeta("identity", identity);
     const { userId, childId } = identity;
-    const profileId = identity.authenticated ? userId : "default-profile";
+    // 一度でもログインしたアカウントは (ログアウト中でも) ユーザーID基準の ID を使う
+    const cloudIds = userId !== LOCAL_USER_ID;
+    const profileId = cloudIds ? userId : "default-profile";
     if (!(await db.profiles.get(profileId))) {
       await db.profiles.put({ id: profileId, userId, displayName: "保護者", createdAt: EPOCH, updatedAt: EPOCH, syncStatus: "synced" });
     }
     if (!(await db.children.get(childId))) {
       await db.children.put({ id: childId, userId, name: "", icon: "🦷", createdAt: EPOCH, updatedAt: EPOCH, syncStatus: "synced" });
     }
-    const settingsId = identity.authenticated ? childId : `settings-${childId}`;
+    const settingsId = cloudIds ? childId : `settings-${childId}`;
     if (!(await db.settings.get(settingsId))) {
       await db.settings.put({
         id: settingsId,
@@ -83,10 +96,28 @@ export async function ensureBootstrap(): Promise<Identity> {
  * 子どものIDはユーザーIDと同一にして、どの端末で初回ログインしても同じ「最初の子ども」に収束させる。
  * 別アカウントのデータが残っている場合は破棄してクラウドから取り直す。
  */
-export async function adoptAuthUser(uid: string): Promise<{ switched: boolean }> {
+export interface AdoptResult {
+  /** 別アカウントのローカルデータを破棄して切り替えた */
+  switched: boolean;
+  /** 前のアカウントに未同期の記録があるため切り替えなかった (データ保護) */
+  blocked?: boolean;
+}
+
+let adopting: Promise<AdoptResult> | null = null;
+
+/** 起動時の getSession と onAuthStateChange が同時に呼んでも1回ずつ順番に処理する */
+export function adoptAuthUser(uid: string): Promise<AdoptResult> {
+  const run = (adopting ?? Promise.resolve()).catch(() => undefined).then(() => adoptAuthUserInner(uid));
+  adopting = run;
+  return run;
+}
+
+async function adoptAuthUserInner(uid: string): Promise<AdoptResult> {
   const cur = await getIdentity();
   if (cur.authenticated && cur.userId === uid) return { switched: false };
-  const foreign = cur.authenticated && cur.userId !== uid;
+  // ログアウト済みでも、以前ログインしていたアカウントのデータは「別アカウント」のもの
+  const foreign = cur.userId !== LOCAL_USER_ID && cur.userId !== uid;
+  if (foreign && (await db.outbox.count()) > 0) return { switched: false, blocked: true };
   const tables = [db.profiles, db.children, db.settings, db.sessions, db.outbox, db.meta];
   await db.transaction("rw", tables, async () => {
     if (foreign) {

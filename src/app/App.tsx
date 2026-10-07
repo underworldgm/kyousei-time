@@ -6,6 +6,7 @@ import { CalendarPage } from "../pages/CalendarPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { TimerPage } from "../pages/TimerPage";
 import { useGoalNotifier } from "../hooks/useGoalNotifier";
+import { AuthProvider } from "../hooks/useAuth";
 
 /** タブを切り替えたら先頭から表示する (上部の歯のキャラクターを隠さない) */
 function ScrollToTop() {
@@ -51,9 +52,11 @@ export function App() {
   return (
     <BrowserRouter>
       <div className="app">
-        <AppDataProvider>
-          <Shell />
-        </AppDataProvider>
+        <AuthProvider>
+          <AppDataProvider>
+            <Shell />
+          </AppDataProvider>
+        </AuthProvider>
       </div>
     </BrowserRouter>
   );

@@ -33,18 +33,15 @@ export default defineConfig({
         skipWaiting: true,
         navigateFallback: "/index.html",
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
+        // Supabase API はキャッシュしない (Service Worker を通さず常にネットワーク)。
+        // データは IndexedDB First で保持しているため、古い API 応答をキャッシュから返すと
+        // 「同期済み」と誤表示したり、ログアウト後も個人データがキャッシュに残ったりするため。
         runtimeCaching: [
           {
             // Webフォント: 使った分割ファイルだけ端末に保存 (Cache First)
             urlPattern: ({ request }) => request.destination === "font",
             handler: "CacheFirst",
             options: { cacheName: "fonts", expiration: { maxEntries: 600, maxAgeSeconds: 365 * 86400 }, cacheableResponse: { statuses: [0, 200] } },
-          },
-          {
-            // API: Network First (オフライン時はキャッシュ)。書き込みは同期キュー経由なので GET のみ対象。
-            urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co"),
-            handler: "NetworkFirst",
-            options: { cacheName: "supabase-api", networkTimeoutSeconds: 5, expiration: { maxEntries: 50, maxAgeSeconds: 86400 } },
           },
         ],
       },

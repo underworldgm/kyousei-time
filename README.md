@@ -72,11 +72,12 @@ RLS: 全テーブルで `user_id = auth.uid()` の行のみ読み書き可 (chil
 - 競合は Last Write Wins (`updatedAt`)。サーバー側トリガーも古い更新を無視。pull はサーバー時刻 `synced_at` カーソルで端末時計のずれに強い。
 - 削除は `deletedAt` の論理削除で、他端末で復活しない。装着記録は1回ごとの別レコードなので、2台での記録は上書きでなくマージされる。集計は区間を結合して二重計上を防ぐ。
 - 新端末の未編集デフォルト (updatedAt=1970) はクラウドの保存済み設定を上書きしない。
-- ログイン時 `local-user` のデータは自分のアカウントに引き継がれる。別アカウントでログインした場合は前のローカルデータを破棄。
+- ログイン時 `local-user` のデータは自分のアカウントに引き継がれる。別アカウントでログインした場合は前のローカルデータを破棄するが、前のアカウントに未同期の記録が残っているときは切り替えを止めて案内する (データ保護)。
+- ログアウト後も記録は端末に残り、オフラインで使い続けられる。同じアカウントで再ログインすると未同期分も同期される。
 - 表示: ✓同期済み / ↑同期待ち / ↻同期中 / !同期エラー / オフライン / この端末に保存。最終同期時刻と「クラウドにバックアップ済み」表示は設定画面。
 
 ## Offline 動作
-アプリシェルは Service Worker で precache (Cache First)、Supabase API は Network First、データは IndexedDB First。`registerType: autoUpdate` + `skipWaiting/clientsClaim/cleanupOutdatedCaches` で古い版は残りません。アプリ起動・設定・装着開始/終了・カレンダー・過去記録はすべて圏外で動作します。
+アプリシェルは Service Worker で precache (Cache First)、データは IndexedDB First、Supabase API はキャッシュせず常にネットワーク (オフライン時は IndexedDB のデータで動作し、復帰後に同期)。API 応答をキャッシュすると、オフライン時に古い応答で「同期済み」と誤表示したり、ログアウト後も個人データがブラウザに残ったりするため、意図的に Service Worker の対象外にしています。`registerType: autoUpdate` + `skipWaiting/clientsClaim/cleanupOutdatedCaches` で古い版は残りません。アプリ起動・設定・装着開始/終了・カレンダー・過去記録はすべて圏外で動作します。
 
 ## PWA
 `manifest.webmanifest` (自動生成)、アイコン (192/512/maskable/apple-touch)、theme/background color、Safe Area 対応、インストール案内 (Android/PC: インストールボタン、iOS: 共有→ホーム画面に追加)。Badge API 用の `setAppBadge` を `lib/notifications.ts` に用意 (現在は未接続)。
@@ -99,6 +100,7 @@ Web Notifications を使用 (HTTPS または localhost 必須)。設定で ON �
 ## テスト
 - `npm test` (Vitest): 下記の単体・同期テストに加え、`supabase/migrations` を PGlite (WASM 版 PostgreSQL) で実行して LWW トリガー・RLS・制約・クライアント同期との噛み合わせを検証
 - `npm run e2e` (Playwright): 本番ビルドを起動し、iPhone SE / iPhone 15 サイズで 装着開始→リロード復元・連打・手動追加/編集/削除・オフライン起動と記録・CSV 復元とカレンダー・横スクロールなし・44px タップ領域・axe によるアクセシビリティ (重大違反ゼロ) を確認。初回のみ `npx playwright install chromium`
+- `npm run e2e` の `sync` プロジェクト: モックの Supabase (認証 + PostgREST、LWW/RLS 再現) に対して、実際の supabase-js でマジックリンクログイン → 2台の端末間の同期 → 削除が復活しない → オフライン復帰後の送信 → サーバー停止時のエラー表示 を確認 (`.env.e2e` で別ビルド)
 - CI: `.github/workflows/ci.yml` が push / PR ごとに lint・test・build・e2e を実行
 
 `npm test` — 目標履歴、CSV 書き出し→復元の往復・重複防止、押しまちがい防止、時間計算 (14時間目標・複数セッション・日付またぎ・達成/未達成・再装着の終了予定)、カレンダー集計・達成判定、入力検証、オフライン保存、outbox 同期・冪等性・LWW・論理削除・複数端末マージ。
