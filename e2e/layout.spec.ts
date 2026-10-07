@@ -58,3 +58,25 @@ test("タブ切替で先頭から表示される (前の画面のスクロール
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await expect(page.locator(".hero-mascot")).toBeInViewport();
 });
+
+test("ダイアログ (記録の追加・削除確認) もアクセシビリティ違反なし・Esc で閉じる", async ({ page }) => {
+  await openApp(page, "/");
+  await page.getByRole("button", { name: "記録を追加する" }).click();
+  const dlg = page.locator("dialog[open]");
+  await expect(dlg.getByLabel("開始時刻")).toBeVisible();
+  let r = await new AxeBuilder({ page }).include("dialog[open]").analyze();
+  expect(r.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(dlg).toHaveCount(0);
+
+  await page.getByRole("button", { name: "記録を追加する" }).click();
+  await dlg.getByLabel("開始時刻").fill("00:00");
+  await dlg.getByLabel("終了時刻").fill("00:01");
+  await dlg.getByRole("button", { name: "追加する" }).click();
+  await page.locator(".session-row").first().getByRole("button", { name: /削除/ }).click();
+  await expect(page.getByText("この装着記録を削除しますか？")).toBeVisible();
+  r = await new AxeBuilder({ page }).include("dialog[open]").analyze();
+  expect(r.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
+  // 誤操作防止: 初期フォーカスは「やめる」
+  await expect(page.getByRole("button", { name: "やめる" })).toBeFocused();
+});

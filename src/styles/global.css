@@ -303,11 +303,11 @@ ul {
   width: 100%;
 }
 .btn.mint {
-  background: var(--mint-dark);
+  background: #12806d; /* 白文字 4.5:1 以上 */
   color: #fff;
 }
 .btn.coral {
-  background: var(--coral-dark);
+  background: #c63d30;
   color: #fff;
 }
 .btn.outline {
@@ -318,7 +318,7 @@ ul {
 .btn.outline-coral {
   background: #fff;
   border-color: var(--coral);
-  color: var(--coral-dark);
+  color: #c63d30;
 }
 .btn-row {
   display: flex;
@@ -343,22 +343,26 @@ ul {
   color: #fff;
   transition: transform 0.1s, filter 0.2s;
 }
+.btn-main {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
 .btn-main.start {
-  background: linear-gradient(180deg, #4ad3ba, #22a995);
-  box-shadow: 0 6px 0 #178a78, 0 10px 18px rgba(34, 169, 149, 0.3);
+  /* 大きな太字 (21px) なので 3:1 以上を確保 */
+  background: linear-gradient(180deg, #22ab95, #13866f);
+  box-shadow: 0 6px 0 #0e6d5b, 0 10px 18px rgba(19, 134, 111, 0.3);
 }
 .btn-main.stop {
-  background: linear-gradient(180deg, #ff8f84, #f2625a);
-  box-shadow: 0 6px 0 #c9453d, 0 10px 18px rgba(242, 98, 90, 0.3);
+  background: linear-gradient(180deg, #ee6a5f, #d24a3f);
+  box-shadow: 0 6px 0 #a8372e, 0 10px 18px rgba(210, 74, 63, 0.3);
 }
 .btn-main:active:not(:disabled) {
   transform: translateY(4px);
 }
 .btn-main.start:active:not(:disabled) {
-  box-shadow: 0 2px 0 #178a78;
+  box-shadow: 0 2px 0 #0e6d5b;
 }
 .btn-main.stop:active:not(:disabled) {
-  box-shadow: 0 2px 0 #c9453d;
+  box-shadow: 0 2px 0 #a8372e;
 }
 .btn-main:disabled {
   filter: saturate(0.6) brightness(1.05);
@@ -397,6 +401,7 @@ ul {
   grid-template-columns: repeat(3, 1fr);
   padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
   background: rgba(255, 255, 255, 0.96);
+  -webkit-backdrop-filter: blur(10px); /* Safari 17 以前 */
   backdrop-filter: blur(10px);
   border-top: 1px solid var(--line);
   border-radius: 22px 22px 0 0;
@@ -1012,7 +1017,7 @@ ul {
   transition: transform 0.2s;
 }
 .switch input:checked + .track {
-  background: var(--mint-dark);
+  background: #12806d;
 }
 .switch input:checked + .track .knob {
   transform: translateX(22px);
