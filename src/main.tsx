@@ -26,5 +26,7 @@ async function boot() {
       <App />
     </StrictMode>,
   );
+  // フォント定義は大きいので描画後に別チャンクで読み込む (読み込み前は端末の丸ゴシック/システムフォント)
+  void import("./styles/fonts").catch(() => undefined);
 }
 void boot();

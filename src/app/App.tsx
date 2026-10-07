@@ -1,10 +1,20 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppDataProvider, useAppData } from "./AppData";
 import { NavBar } from "../components/NavBar";
 import { CalendarPage } from "../pages/CalendarPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { TimerPage } from "../pages/TimerPage";
 import { useGoalNotifier } from "../hooks/useGoalNotifier";
+
+/** タブを切り替えたら先頭から表示する (上部の歯のキャラクターを隠さない) */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 function Shell() {
   const data = useAppData();
@@ -23,6 +33,7 @@ function Shell() {
   if (!data.loaded) return <div className="loading" aria-busy="true">よみこみ中…</div>;
   return (
     <>
+      <ScrollToTop />
       <div className="screen">
         <Routes>
           <Route path="/" element={<TimerPage />} />

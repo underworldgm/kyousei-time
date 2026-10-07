@@ -9,7 +9,7 @@ export function SyncBadge() {
   let tone = "ok";
   if (s.phase === "local" || s.phase === "signed-out") {
     icon = "▣";
-    label = s.pending ? "この端末に保存済み" : "この端末に保存";
+    label = "この端末に保存";
     tone = "muted";
   } else if (s.phase === "offline" || !s.online) {
     icon = "○";

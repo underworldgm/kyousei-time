@@ -15,7 +15,7 @@
 
 ## 技術構成
 React 18 + TypeScript + Vite / React Router / Dexie (IndexedDB) / vite-plugin-pwa (Workbox) / Supabase (Auth + PostgreSQL) / Vitest。
-UI フレームワークは使わず CSS を自作。フォントは端末の丸ゴシック系 (Hiragino Maru Gothic, M PLUS Rounded 等) → システムフォントのフォールバックで、Webフォントへの外部依存はありません。
+UI フレームワークは使わず CSS を自作。フォントは M PLUS Rounded 1c (SIL OFL, `@fontsource`) をアプリと一緒に配信 (外部 CDN 依存なし)。unicode-range 分割で使う文字だけ読み込み、Service Worker が端末にキャッシュするのでオフラインでも同じ見た目。読み込み前は端末の丸ゴシック → システムフォントにフォールバック。
 
 ```
 src/

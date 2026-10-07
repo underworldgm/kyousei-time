@@ -108,13 +108,20 @@ export function SettingsPage() {
     }
   };
 
+  const dirty =
+    !!settings &&
+    (minutes !== settings.dailyTargetMinutes ||
+      notify !== settings.notificationsEnabled ||
+      stamp !== settings.rewardStampEnabled ||
+      (!!child && (name.trim() !== child.name || icon !== child.icon)));
+
   const perm = permissionState();
   const backedUp = sync.phase === "idle" && sync.pending === 0 && !!sync.lastSyncedAt;
   const signedIn = !!auth.session;
 
   return (
     <>
-      <Hero childName={child?.name ?? ""} />
+      <Hero childName={child?.name ?? ""} childIcon={child?.icon} />
       <main className="page settings-page">
         <h2 className="page-title">設定</h2>
 
@@ -179,7 +186,9 @@ export function SettingsPage() {
         <button type="button" className="btn-main start save" onClick={() => void save()}>
           <span className="btn-glyph" aria-hidden="true">✓</span> 保存する
         </button>
-        <p className="saved" role="status">{saved ?? ""}</p>
+        <p className={`saved${!saved && dirty ? " dirty" : ""}`} role="status">
+          {saved ?? (dirty ? "未保存の変更があります" : "")}
+        </p>
 
         <section className="card" aria-labelledby="sync-title">
           <div className="card-head">

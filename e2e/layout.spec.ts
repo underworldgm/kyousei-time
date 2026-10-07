@@ -49,3 +49,12 @@ test("操作部品は 44px 以上", async ({ page }) => {
     expect(small, p.path).toEqual([]);
   }
 });
+
+test("タブ切替で先頭から表示される (前の画面のスクロール位置を引き継がない)", async ({ page }) => {
+  await openApp(page, "/settings");
+  await page.getByRole("button", { name: "保存する" }).scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await page.getByRole("link", { name: "時間" }).click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.locator(".hero-mascot")).toBeInViewport();
+});

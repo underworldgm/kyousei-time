@@ -63,7 +63,7 @@ export function TimerPage() {
 
   return (
     <>
-      <Hero childName={child?.name ?? ""} mood={mood} crown={sum.achieved}>
+      <Hero childName={child?.name ?? ""} childIcon={child?.icon} mood={mood} crown={sum.achieved}>
         <p className="goal-chip">
           <span aria-hidden="true">👑</span> 今日の目標 <strong>{fmtDuration(targetMinutes, { short: true })}</strong>
         </p>
@@ -71,6 +71,12 @@ export function TimerPage() {
 
       <main className="page timer-page">
         <section className="ring-wrap" aria-label="今日の装着状況">
+          <div className="ring-deco" aria-hidden="true">
+            <Sparkle x="6%" y="10%" s={14} />
+            <Sparkle x="88%" y="18%" s={11} color="#7fcaf5" delay={0.8} />
+            <Sparkle x="10%" y="78%" s={10} color="#ff9aa2" delay={1.6} />
+            <Sparkle x="86%" y="74%" s={15} delay={0.4} />
+          </div>
           <Ring progress={progress} achieved={sum.achieved}>
             <p className={`state-chip ${wearing ? "on" : "off"}`}>
               <span aria-hidden="true">{wearing ? "●" : "○"}</span> {wearing ? "装着中" : "外しています"}

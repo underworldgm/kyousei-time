@@ -5,6 +5,7 @@ import { SyncBadge } from "./SyncBadge";
 
 interface Props {
   childName: string;
+  childIcon?: string;
   mood?: "happy" | "cheer" | "sad";
   crown?: boolean;
   children?: ReactNode;
@@ -14,7 +15,7 @@ const LETTERS = "きょうせいタイム".split("");
 const COLORS = ["#2fb8a0", "#37bfa6", "#45b8c9", "#58aee0", "#6ea7e6", "#58aee0", "#3fb7b8", "#2fb8a0"];
 
 /** 全画面共通の上部: ロゴ・同期状態・虹と雲の空・歯のキャラクター */
-export function Hero({ childName, mood = "happy", crown = false, children }: Props) {
+export function Hero({ childName, childIcon, mood = "happy", crown = false, children }: Props) {
   return (
     <header className="hero">
       <div className="hero-sky" aria-hidden="true">
@@ -28,7 +29,14 @@ export function Hero({ childName, mood = "happy", crown = false, children }: Pro
       </div>
       <div className="hero-left">
         <SyncBadge />
-        <p className="hero-sub">{childName ? `${childName}の` : "みんなの"}</p>
+        <p className="hero-sub">
+          {childName && childIcon && (
+            <span className="hero-avatar" aria-hidden="true">
+              {childIcon}
+            </span>
+          )}
+          {childName ? `${childName}の` : "みんなの"}
+        </p>
         <h1 className="logo" aria-label="きょうせいタイム">
           {LETTERS.map((c, i) => (
             <span key={i} style={{ color: COLORS[i] }} aria-hidden="true">

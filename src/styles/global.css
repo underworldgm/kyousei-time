@@ -12,6 +12,7 @@ body {
   font-family: var(--font);
   color: var(--navy);
   background: #e9f6fb;
+  font-weight: 500;
   line-height: 1.45;
   overscroll-behavior-y: none;
 }
@@ -124,7 +125,21 @@ ul {
   align-items: flex-start;
   padding-bottom: 8px;
 }
+.hero-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--yellow);
+  font-size: 15px;
+  vertical-align: middle;
+}
 .hero-sub {
+  display: flex;
+  align-items: center;
   margin-top: 8px;
   font-size: 13px;
   font-weight: 700;
@@ -417,6 +432,11 @@ ul {
   display: grid;
   place-items: center;
   margin-top: -2px;
+}
+.ring-deco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 .ring {
   position: relative;
@@ -1059,6 +1079,9 @@ input[type="time"] {
   font-weight: 800;
   color: #137a68;
   font-size: 14px;
+}
+.saved.dirty {
+  color: #94560a;
 }
 .backup {
   font-size: 14px;

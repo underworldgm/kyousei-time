@@ -65,7 +65,7 @@ export function CalendarPage() {
 
   return (
     <>
-      <Hero childName={child?.name ?? ""} />
+      <Hero childName={child?.name ?? ""} childIcon={child?.icon} />
       <main className="page cal-page">
         <section className="card cal-card" aria-label="月間カレンダー">
           <div className="cal-head">

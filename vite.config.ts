@@ -35,6 +35,12 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
         runtimeCaching: [
           {
+            // Webフォント: 使った分割ファイルだけ端末に保存 (Cache First)
+            urlPattern: ({ request }) => request.destination === "font",
+            handler: "CacheFirst",
+            options: { cacheName: "fonts", expiration: { maxEntries: 600, maxAgeSeconds: 365 * 86400 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+          {
             // API: Network First (オフライン時はキャッシュ)。書き込みは同期キュー経由なので GET のみ対象。
             urlPattern: ({ url }) => url.hostname.endsWith(".supabase.co"),
             handler: "NetworkFirst",
