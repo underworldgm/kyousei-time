@@ -19,6 +19,7 @@ npm run dev                 # http://CT303:5173 (--host 済み)
 Node 20 以上。`main` に直接コミットせず、`claude/<task>` ブランチ → PR で統合 (AGENTS.md 参照)。
 
 ## 進捗メモ (更新して引き継ぐ)
-- 完了: React/TS/Vite 再構築、3画面UI、IndexedDB (Dexie)、時間計算、同期エンジン (outbox/LWW)、Supabase migration + RLS、PWA、通知、CSV、テスト(36件)
-- 未実施: 実Supabaseプロジェクトでの結合確認、実機(iOS/Android)確認、CSVインポート、PDF出力、Web Push
+- 完了: React/TS/Vite 再構築、3画面UI、IndexedDB (Dexie)、時間計算、同期エンジン (outbox/LWW)、Supabase migration + RLS、PWA、通知、CSV、テスト
+- 完了(2回目): CSV復元、目標時間の履歴 (migration 0003)、1分未満の押しまちがい破棄、320〜375px幅のレイアウト修正、本番ビルドでのリロード復元・オフライン動作の自動確認
+- 未実施: 実Supabaseプロジェクトでの結合確認、実機(iOS/Android)確認、PDF出力、Web Push、複数の子どもの切替UI
 - 旧実装 (素のHTML/JS) は `legacy/` に残してあります。

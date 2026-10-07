@@ -4,7 +4,7 @@ import { getIdentity } from "../db/repo";
 import { useLive } from "../hooks/useLive";
 import { useNow } from "../hooks/useNow";
 import type { Child, Identity, Settings, WearSession } from "../types";
-import { dayKeyOf, intervalsOf, type Interval } from "../lib/time";
+import { dayKeyOf, intervalsOf, targetForDay, type Interval } from "../lib/time";
 
 interface Snapshot {
   identity: Identity;
@@ -20,7 +20,10 @@ export interface AppData extends Snapshot {
   todayKey: string;
   active: WearSession | null;
   intervals: Interval[];
+  /** 今日の目標 (分) */
   targetMinutes: number;
+  /** その日に有効だった目標 (分)。過去日の達成判定に使う */
+  targetFor: (dayKey: string) => number;
 }
 
 const EMPTY: Snapshot = { identity: { userId: "local-user", childId: "default-child", authenticated: false }, child: null, settings: null, sessions: [] };
@@ -42,19 +45,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const active = useMemo(() => value.sessions.filter((s) => !s.endTime).sort((a, b) => a.startTime.localeCompare(b.startTime))[0] ?? null, [value.sessions]);
   // 装着中は秒表示のため毎秒、そうでなければ15秒ごと (+画面復帰時) に更新
   const now = useNow(active ? 1000 : 15000);
-  const data = useMemo<AppData>(
-    () => ({
+  const targetFor = useMemo(() => {
+    const st = value.settings;
+    const current = st?.dailyTargetMinutes ?? 840;
+    return (key: string) => targetForDay(st?.targetHistory, current, key);
+  }, [value.settings]);
+  const data = useMemo<AppData>(() => {
+    const todayKey = dayKeyOf(now);
+    return {
       ...value,
       loaded,
       error,
       now,
-      todayKey: dayKeyOf(now),
+      todayKey,
       active,
       intervals: intervalsOf(value.sessions, now),
-      targetMinutes: value.settings?.dailyTargetMinutes ?? 840,
-    }),
-    [value, loaded, error, now, active],
-  );
+      targetMinutes: targetFor(todayKey),
+      targetFor,
+    };
+  }, [value, loaded, error, now, active, targetFor]);
   return <Ctx.Provider value={data}>{children}</Ctx.Provider>;
 }
 

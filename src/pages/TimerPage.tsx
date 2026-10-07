@@ -12,7 +12,7 @@ import { LONG_SESSION_WARN_MS } from "../lib/validation";
 import { permissionState } from "../lib/notifications";
 
 export function TimerPage() {
-  const { now, todayKey, intervals, sessions, active, targetMinutes, settings, child } = useAppData();
+  const { now, todayKey, intervals, sessions, active, targetMinutes, targetFor, settings, child } = useAppData();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const install = useInstall();
@@ -20,7 +20,7 @@ export function TimerPage() {
   const sum = summarizeDay(intervals, todayKey, targetMinutes);
   const wearing = !!active;
   const goalAt = expectedGoalTime(sum, now);
-  const streak = currentStreak(intervals, targetMinutes, todayKey);
+  const streak = currentStreak(intervals, targetFor, todayKey);
   const progress = targetMinutes ? sum.totalMs / (targetMinutes * MIN_MS) : 0;
   const elapsedMin = active ? Math.floor((now - Date.parse(active.startTime)) / MIN_MS) : 0;
   const longRunning = active ? now - Date.parse(active.startTime) > LONG_SESSION_WARN_MS : false;
@@ -44,7 +44,10 @@ export function TimerPage() {
     setBusy(true);
     setMsg(null);
     try {
-      if (wearing) await stopWear();
+      if (wearing) {
+        const r = await stopWear();
+        if (r?.ok && r.discarded) setMsg("1分未満だったので記録しませんでした");
+      }
       else {
         const r = await startWear();
         if (!r.ok) setMsg(r.error);

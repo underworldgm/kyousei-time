@@ -4,7 +4,8 @@ import { Hero } from "../components/Hero";
 import { useAuth } from "../hooks/useAuth";
 import { useInstall } from "../hooks/useInstall";
 import { useSyncState } from "../hooks/useSyncState";
-import { clearSampleData, saveChild, saveSettings, seedSampleData } from "../db/repo";
+import { clearSampleData, importIntervals, saveChild, saveSettings, seedSampleData } from "../db/repo";
+import { parseSessionsCsv } from "../lib/csv";
 import { cloudConfigured } from "../lib/supabase";
 import { ensurePermission, permissionState } from "../lib/notifications";
 import { requestSync } from "../lib/sync";
@@ -27,8 +28,8 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 }
 
 export function SettingsPage() {
-  const { settings, child, sessions, now, targetMinutes, identity } = useAppData();
-  const [minutes, setMinutes] = useState(targetMinutes);
+  const { settings, child, sessions, now, targetMinutes, targetFor, identity } = useAppData();
+  const [minutes, setMinutes] = useState(settings?.dailyTargetMinutes ?? targetMinutes);
   const [notify, setNotify] = useState(true);
   const [stamp, setStamp] = useState(true);
   const [name, setName] = useState("");
@@ -79,7 +80,7 @@ export function SettingsPage() {
   };
 
   const exportCsv = () => {
-    const csv = sessionsToCsv(sessions, targetMinutes, Date.now());
+    const csv = sessionsToCsv(sessions, targetFor, Date.now());
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
@@ -88,6 +89,23 @@ export function SettingsPage() {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const importCsv = async (file: File | undefined) => {
+    if (!file) return;
+    setImportMsg(null);
+    try {
+      const { intervals, invalidLines } = parseSessionsCsv(await file.text());
+      const r = await importIntervals(intervals);
+      const parts = [`${r.added}件を追加しました`];
+      if (r.duplicates) parts.push(`${r.duplicates}件は同じ記録があるため省略`);
+      if (r.skipped) parts.push(`${r.skipped}件は既存の記録と重なる・時刻が正しくないため省略`);
+      if (invalidLines.length) parts.push(`読めない行: ${invalidLines.slice(0, 5).join(", ")}${invalidLines.length > 5 ? " ほか" : ""}`);
+      setImportMsg(parts.join(" / "));
+    } catch {
+      setImportMsg("ファイルを読み込めませんでした");
+    }
   };
 
   const perm = permissionState();
@@ -220,10 +238,26 @@ export function SettingsPage() {
             <span className="bubble mint" aria-hidden="true">📄</span>
             <h3 id="data-title">データ</h3>
           </div>
-          <p className="hint">記録をCSVで保存できます（歯科医院への共有・バックアップ用）。</p>
+          <p className="hint">記録をCSVで保存・復元できます（歯科医院への共有・機種変更・バックアップ用）。復元では、すでにある記録と重なるものは追加しません。</p>
           <button type="button" className="btn outline wide" onClick={exportCsv} disabled={!sessions.length}>
             CSVを書き出す
           </button>
+          <label className="btn outline wide file-btn">
+            CSVから復元する
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(e) => {
+                void importCsv(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {importMsg && (
+            <p className="hint" role="status">
+              {importMsg}
+            </p>
+          )}
           <p className="hint small">現在の記録: {sessions.length}件 / 目標 {fmtDuration(targetMinutes, { short: true })}</p>
         </section>
 

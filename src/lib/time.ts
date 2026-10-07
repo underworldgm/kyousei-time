@@ -181,6 +181,50 @@ export function entriesOnDay(sessions: WearSession[], dayKey: string, now: numbe
   return out.sort((a, b) => a.start - b.start);
 }
 
+// ---------------------------------------------------------------- targets
+
+/** 目標時間: 固定値、または日ごとの目標 (目標変更の履歴) を返す関数 */
+export type TargetSpec = number | ((dayKey: string) => number);
+export const targetOn = (t: TargetSpec, dayKey: string): number => (typeof t === "number" ? t : t(dayKey));
+
+export interface TargetChange {
+  /** この日 (JST) から有効 */
+  from: string;
+  minutes: number;
+}
+
+/**
+ * 目標変更の履歴から、その日の目標を返す。
+ * 履歴より前の日は最初の履歴の値 (履歴導入前のデータは当時の目標が分からないため)、履歴が空なら現在の目標。
+ */
+export function targetForDay(history: TargetChange[] | undefined, current: number, dayKey: string): number {
+  if (!history || !history.length) return current;
+  let v = history[0].minutes;
+  for (const h of history) {
+    if (h.from <= dayKey) v = h.minutes;
+    else break;
+  }
+  return v;
+}
+
+/** 目標を変更したときの履歴更新 (同じ日の変更は上書き、変化なしなら追加しない) */
+export function withTargetChange(history: TargetChange[] | undefined, prevMinutes: number, nextMinutes: number, todayKey: string): TargetChange[] {
+  const list = [...(history ?? [])].sort((a, b) => a.from.localeCompare(b.from));
+  if (!list.length) {
+    if (prevMinutes === nextMinutes) return list;
+    // 履歴開始前の日は変更前の目標で判定する
+    list.push({ from: "0000-01-01", minutes: prevMinutes });
+  }
+  const last = list[list.length - 1];
+  if (last.minutes === nextMinutes) return list;
+  if (last.from === todayKey) {
+    list[list.length - 1] = { from: todayKey, minutes: nextMinutes };
+    // 当日中に元へ戻した場合は不要な履歴を消す
+    if (list.length >= 2 && list[list.length - 2].minutes === nextMinutes) list.pop();
+  } else list.push({ from: todayKey, minutes: nextMinutes });
+  return list;
+}
+
 // ---------------------------------------------------------------- day summary
 
 export interface DaySummary {
@@ -247,7 +291,7 @@ export function summarizeMonth(
   intervals: Interval[],
   year: number,
   month: number,
-  targetMinutes: number,
+  target: TargetSpec,
   todayKey: string,
 ): MonthSummary {
   const n = daysInMonth(year, month);
@@ -258,7 +302,7 @@ export function summarizeMonth(
     const key = monthKey(year, month, d);
     const future = key > todayKey;
     const minutes = future ? 0 : Math.floor(dayTotalMs(intervals, key) / MIN_MS);
-    const status: DayStatus = future ? "future" : minutes >= targetMinutes ? "achieved" : minutes > 0 ? "partial" : "none";
+    const status: DayStatus = future ? "future" : minutes >= targetOn(target, key) ? "achieved" : minutes > 0 ? "partial" : "none";
     if (!future) elapsedDays++;
     if (status === "achieved") achievedCount++;
     days.push({ dayKey: key, day: d, weekday: weekdayOf(key), minutes, status, isToday: key === todayKey });
@@ -276,8 +320,8 @@ export function summarizeMonth(
 /**
  * 連続達成日数。今日がまだ未達成でも、昨日までの連続は途切れ扱いにしない (プレッシャーを避ける)。
  */
-export function currentStreak(intervals: Interval[], targetMinutes: number, todayKey: string, maxDays = 400): number {
-  const ok = (key: string) => Math.floor(dayTotalMs(intervals, key) / MIN_MS) >= targetMinutes;
+export function currentStreak(intervals: Interval[], target: TargetSpec, todayKey: string, maxDays = 400): number {
+  const ok = (key: string) => Math.floor(dayTotalMs(intervals, key) / MIN_MS) >= targetOn(target, key);
   let key = ok(todayKey) ? todayKey : addDays(todayKey, -1);
   let n = 0;
   while (n < maxDays && ok(key)) {
@@ -296,13 +340,14 @@ export interface RangeStats {
 }
 
 /** endKey を含む直近 days 日 (7日間 / 30日間など) の集計 */
-export function rangeStats(intervals: Interval[], endKey: string, days: number, targetMinutes: number): RangeStats {
+export function rangeStats(intervals: Interval[], endKey: string, days: number, target: TargetSpec): RangeStats {
   let total = 0;
   let achieved = 0;
   for (let i = 0; i < days; i++) {
-    const m = Math.floor(dayTotalMs(intervals, addDays(endKey, -i)) / MIN_MS);
+    const key = addDays(endKey, -i);
+    const m = Math.floor(dayTotalMs(intervals, key) / MIN_MS);
     total += m;
-    if (m >= targetMinutes) achieved++;
+    if (m >= targetOn(target, key)) achieved++;
   }
   return { days, totalMinutes: total, averageMinutes: Math.round(total / days), achievedDays: achieved };
 }
@@ -315,7 +360,7 @@ const csvCell = (v: string | number | boolean) => {
 };
 
 /** 日付,開始時間,終了時間,装着時間(分),目標時間(分),達成 。日付またぎは日ごとに1行へ分割。 */
-export function sessionsToCsv(sessions: WearSession[], targetMinutes: number, now: number): string {
+export function sessionsToCsv(sessions: WearSession[], target: TargetSpec, now: number): string {
   const merged = intervalsOf(sessions, now);
   const rows: string[][] = [["日付", "開始時間", "終了時間", "装着時間", "目標時間", "達成"]];
   const segs: { key: string; start: number; end: number }[] = [];
@@ -329,7 +374,8 @@ export function sessionsToCsv(sessions: WearSession[], targetMinutes: number, no
     const minutes = Math.round((seg.end - seg.start) / MIN_MS);
     const dayTotal = Math.floor(dayTotalMs(merged, seg.key) / MIN_MS);
     const endHM = seg.end === dayStartMs(seg.key) + DAY_MS ? "24:00" : jstHM(seg.end);
-    rows.push([seg.key, jstHM(seg.start), endHM, String(minutes), String(targetMinutes), String(dayTotal >= targetMinutes)]);
+    const t = targetOn(target, seg.key);
+    rows.push([seg.key, jstHM(seg.start), endHM, String(minutes), String(t), String(dayTotal >= t)]);
   }
   return "﻿" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }

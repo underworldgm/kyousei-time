@@ -1,4 +1,4 @@
-import { fmtDuration, jstHM, DAY_MS, dayStartMs, dayKeyOf, MIN_MS, type DayEntry } from "../lib/time";
+import { fmtDuration, jstHM, DAY_MS, dayStartMs, MIN_MS, type DayEntry } from "../lib/time";
 
 interface Props {
   entry: DayEntry;
@@ -25,8 +25,6 @@ export function SessionRow({ entry, dayKey, onEdit, onDelete }: Props) {
   const endLabel = entry.active ? "装着中" : entry.toNextDay ? `翌${jstHM(Date.parse(entry.session.endTime!))}` : entry.end === dayEnd ? "24:00" : jstHM(entry.end);
   const duration = fmtDuration(Math.floor(entry.ms / MIN_MS));
   const crossNote = entry.fromPrevDay || entry.toNextDay ? "日付をまたぐ記録" : null;
-  const sameDay = dayKeyOf(entry.start) === dayKey;
-  void sameDay;
   return (
     <li className={`session-row${entry.active ? " active" : ""}`}>
       <span className="session-icon" aria-hidden="true">
@@ -34,10 +32,9 @@ export function SessionRow({ entry, dayKey, onEdit, onDelete }: Props) {
       </span>
       <div className="session-main">
         <p className="session-time">
-          {startLabel} → {entry.active ? <strong className="live">装着中</strong> : endLabel}
+          <span>{startLabel}</span> → <span>{entry.active ? <strong className="live">装着中</strong> : endLabel}</span>
         </p>
         <p className="session-dur">
-          {entry.active && <span className="badge">装着中</span>}
           {duration}
           {crossNote && <small>（{crossNote}）</small>}
         </p>

@@ -9,7 +9,9 @@
 - 画面: 設定 / 時間 / カレンダー (下部ナビ)
 - 1日に複数回の着脱 (1回の装着 = 1 `WearSession`)、今日の合計・残り・終了予定、記録の追加/修正/論理削除
 - 日付またぎ (Asia/Tokyo 基準で日別に分割集計)、連続達成、月間達成、7日/30日集計 (`rangeStats`)
-- 達成スタンプ、達成演出 (`prefers-reduced-motion` 対応)、通知、CSV 書き出し
+- 達成スタンプ、達成演出 (`prefers-reduced-motion` 対応)、通知、CSV 書き出し・復元
+- 目標時間の変更履歴: 目標を変えても、過去日の達成判定はその日に有効だった目標で行う
+- 開始から1分未満で終了した装着は押しまちがいとして記録しない (論理削除)
 
 ## 技術構成
 React 18 + TypeScript + Vite / React Router / Dexie (IndexedDB) / vite-plugin-pwa (Workbox) / Supabase (Auth + PostgreSQL) / Vitest。
@@ -48,7 +50,7 @@ DB 名 `kyousei-time`。`profiles / children / settings / sessions / outbox / me
 実行中のタイマーは **`startTime` のみ保存**し、表示は常に「現在時刻 − startTime」から計算します (setInterval の積算は使わない)。ロック・再起動・更新しても継続します。
 
 ## Supabase / .env
-1. `supabase/README.md` の手順で `migrations/0001_init.sql`, `0002_rls.sql` を実行
+1. `supabase/README.md` の手順で `migrations/` の SQL (0001〜0003) を番号順に実行
 2. Email (Magic Link) を有効化し、Redirect URL にデプロイ先を追加
 3. `.env`:
 ```
@@ -57,6 +59,9 @@ VITE_SUPABASE_ANON_KEY=...
 ```
 service_role キー等の秘密鍵は絶対にコミットしないでください (`.env` は `.gitignore` 済み)。
 RLS: 全テーブルで `user_id = auth.uid()` の行のみ読み書き可 (children も所有者で制限)。anon ロールは権限なし。
+
+## CSV 書き出し・復元
+設定画面 → データ。書き出し形式: `日付,開始時間,終了時間,装着時間,目標時間,達成` (日付またぎは日ごとの行に分割、Excel 用 BOM 付き)。復元は同じ形式を読み込み、分割された行を1件に戻します。既存の記録と同一・重なるものは追加しない (既存を優先) ので、同じファイルを何度読み込んでも重複しません。手書きCSVで終了が開始より前の行は翌日扱いです。
 
 ## 同期の仕組み
 ```
@@ -92,13 +97,13 @@ Web Notifications を使用 (HTTPS または localhost 必須)。設定で ON �
 `npm run build` の `dist/` を Vercel / Cloudflare Pages / Netlify に配置 (SPA フォールバック: `vercel.json`, `public/_redirects` 同梱)。環境変数 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` を設定。Supabase の Redirect URL にデプロイ先を追加。
 
 ## テスト
-`npm test` — 時間計算 (14時間目標・複数セッション・日付またぎ・達成/未達成・再装着の終了予定)、カレンダー集計・達成判定、入力検証、オフライン保存、outbox 同期・冪等性・LWW・論理削除・複数端末マージ。
+`npm test` — 目標履歴、CSV 書き出し→復元の往復・重複防止、押しまちがい防止、時間計算 (14時間目標・複数セッション・日付またぎ・達成/未達成・再装着の終了予定)、カレンダー集計・達成判定、入力検証、オフライン保存、outbox 同期・冪等性・LWW・論理削除・複数端末マージ。
 
 ## CT303 への引き継ぎ
 `docs/HANDOFF.md` と `scripts/handoff.sh` を参照。
 
 ## 既知の制限 / 今後の改善
-- 過去日の達成判定は「現在の目標時間」で行う (目標の履歴は未保存)
-- CSV インポート、PDF 出力、Web Push、複数の子どもの切り替えUI、グラフ画面は未実装
+- 目標履歴の導入前に記録された日は、導入時点 (最初の変更前) の目標で判定
+- PDF 出力、Web Push、複数の子どもの切り替えUI、グラフ画面は未実装
 - 実 Supabase プロジェクト・実機 iOS/Android での確認は未実施
 - 日付は Asia/Tokyo 固定

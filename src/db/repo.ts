@@ -8,6 +8,7 @@
 import { db, getMeta, setMeta } from "./indexedDb";
 import { uuid } from "../lib/id";
 import { validateRange } from "../lib/validation";
+import { dayKeyOf, withTargetChange } from "../lib/time";
 import {
   DEFAULT_CHILD_ID,
   LOCAL_USER_ID,
@@ -154,7 +155,7 @@ async function writeRecord<T extends AnyRecord>(table: TableName, rec: T): Promi
 
 // ---------------------------------------------------------------- sessions
 
-export type OpResult<T = WearSession> = { ok: true; session: T; warning?: string | null } | { ok: false; error: string; session?: T };
+export type OpResult<T = WearSession> = { ok: true; session: T; warning?: string | null; discarded?: boolean } | { ok: false; error: string; session?: T };
 
 /** 装着開始。すでに装着中なら新規作成せず既存セッションを返す (二重タップ・複数タブ対策)。 */
 export async function startWear(now = Date.now()): Promise<OpResult> {
@@ -181,6 +182,9 @@ export async function startWear(now = Date.now()): Promise<OpResult> {
   return result;
 }
 
+/** これより短い装着は押しまちがいとみなして記録しない */
+export const MIN_DURATION_MS = 60_000;
+
 /** 装着終了。複数の装着中セッションが (同期で) 存在する場合はすべて終了する。 */
 export async function stopWear(now = Date.now()): Promise<OpResult | null> {
   const id = await getIdentity();
@@ -188,14 +192,19 @@ export async function stopWear(now = Date.now()): Promise<OpResult | null> {
     const active = (await db.sessions.where("childId").equals(id.childId).toArray()).filter((s) => !s.endTime && !s.deletedAt);
     if (!active.length) return null;
     let last: WearSession = active[0];
+    let discarded = false;
     for (const s of active) {
       const start = Date.parse(s.startTime);
-      // 時計のずれで終了 <= 開始になる場合も壊れた記録を作らない
-      const end = Math.max(now, start + 1000);
-      last = { ...s, endTime: nowIso(end), updatedAt: nowIso(now) };
+      if (now - start < MIN_DURATION_MS) {
+        // 開始直後の終了 (押しまちがい) は0分の記録を残さない。論理削除なので同期もされる
+        last = { ...s, deletedAt: nowIso(now), updatedAt: nowIso(now) };
+        discarded = true;
+      } else {
+        last = { ...s, endTime: nowIso(now), updatedAt: nowIso(now) };
+      }
       await writeRecord("sessions", last);
     }
-    return { ok: true, session: last };
+    return { ok: true, session: last, discarded: discarded && active.length === 1 };
   });
   if (result?.ok) emitWrite();
   return result;
@@ -252,6 +261,54 @@ export async function deleteSession(sessionId: string, now = Date.now()): Promis
   return true;
 }
 
+export interface ImportResult {
+  added: number;
+  /** 同じ記録がすでにある */
+  duplicates: number;
+  /** 既存の記録と重なる・不正な時刻 */
+  skipped: number;
+}
+
+/**
+ * CSV などから読み込んだ区間を装着記録として追加する。
+ * 同じバックアップを2回読み込んでも重複しないよう、既存と重なるものは追加しない (既存データを優先)。
+ */
+export async function importIntervals(list: { start: number; end: number }[], now = Date.now()): Promise<ImportResult> {
+  const id = await getIdentity();
+  const result: ImportResult = { added: 0, duplicates: 0, skipped: 0 };
+  await db.transaction("rw", [db.sessions, db.outbox], async () => {
+    const existing = (await db.sessions.where("childId").equals(id.childId).toArray()).filter((s) => !s.deletedAt);
+    for (const iv of list) {
+      const same = existing.some((s) => Date.parse(s.startTime) === iv.start && s.endTime && Date.parse(s.endTime) === iv.end);
+      if (same) {
+        result.duplicates++;
+        continue;
+      }
+      if (!validateRange(iv.start, iv.end, now, existing).ok) {
+        result.skipped++;
+        continue;
+      }
+      const ts = nowIso(now);
+      const session: WearSession = {
+        id: uuid(),
+        userId: id.userId,
+        childId: id.childId,
+        startTime: nowIso(iv.start),
+        endTime: nowIso(iv.end),
+        createdAt: ts,
+        updatedAt: ts,
+        deletedAt: null,
+        syncStatus: "pending",
+      };
+      await writeRecord("sessions", session);
+      existing.push(session);
+      result.added++;
+    }
+  });
+  if (result.added) emitWrite();
+  return result;
+}
+
 // ---------------------------------------------------------------- settings / child
 
 export async function saveSettings(
@@ -260,12 +317,13 @@ export async function saveSettings(
 ): Promise<Settings> {
   const id = await getIdentity();
   const cur = await getSettings(id);
-  const minutes = patch.dailyTargetMinutes ?? cur.dailyTargetMinutes;
+  // 1〜24時間。内部は分単位なので30分刻みへの拡張も可能
+  const minutes = Math.min(24 * 60, Math.max(60, Math.round(patch.dailyTargetMinutes ?? cur.dailyTargetMinutes)));
   const next: Settings = {
     ...cur,
     ...patch,
-    // 1〜24時間。内部は分単位なので30分刻みへの拡張も可能
-    dailyTargetMinutes: Math.min(24 * 60, Math.max(60, Math.round(minutes))),
+    dailyTargetMinutes: minutes,
+    targetHistory: withTargetChange(cur.targetHistory, cur.dailyTargetMinutes, minutes, dayKeyOf(now)),
     createdAt: cur.createdAt === EPOCH ? nowIso(now) : cur.createdAt,
     updatedAt: nowIso(now),
   };

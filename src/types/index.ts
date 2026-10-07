@@ -29,6 +29,8 @@ export interface Settings extends LocalMeta {
   childId: string;
   /** 1日の目標装着時間 (分)。14時間 = 840 */
   dailyTargetMinutes: number;
+  /** 目標変更の履歴 (過去日の達成判定を当時の目標で行う)。古いデータでは未定義のことがある */
+  targetHistory?: { from: string; minutes: number }[];
   notificationsEnabled: boolean;
   rewardStampEnabled: boolean;
   createdAt: string;

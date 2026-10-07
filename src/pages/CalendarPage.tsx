@@ -3,7 +3,7 @@ import { useAppData } from "../app/AppData";
 import { DayRecords } from "../components/DayRecords";
 import { Hero } from "../components/Hero";
 import { Mascot } from "../components/Mascot";
-import { currentStreak, fmtDuration, parseDayKey, summarizeDay, summarizeMonth, weekdayOf, dayStartMs, type CalendarDay } from "../lib/time";
+import { currentStreak, fmtDuration, parseDayKey, summarizeDay, summarizeMonth, weekdayOf, type CalendarDay } from "../lib/time";
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -40,14 +40,14 @@ function Stamp({ status, enabled }: { status: CalendarDay["status"]; enabled: bo
 const statusLabel = { achieved: "目標達成", partial: "未達成", none: "記録なし", future: "" } as const;
 
 export function CalendarPage() {
-  const { now, todayKey, intervals, sessions, targetMinutes, settings, child } = useAppData();
+  const { now, todayKey, intervals, sessions, targetFor, settings, child } = useAppData();
   const t = parseDayKey(todayKey);
   const [ym, setYm] = useState({ y: t.y, m: t.m });
   const [selected, setSelected] = useState(todayKey);
-  const month = useMemo(() => summarizeMonth(intervals, ym.y, ym.m, targetMinutes, todayKey), [intervals, ym, targetMinutes, todayKey]);
+  const month = useMemo(() => summarizeMonth(intervals, ym.y, ym.m, targetFor, todayKey), [intervals, ym, targetFor, todayKey]);
   const lead = month.days[0].weekday;
   const stampOn = settings?.rewardStampEnabled ?? true;
-  const streak = currentStreak(intervals, targetMinutes, todayKey);
+  const streak = currentStreak(intervals, targetFor, todayKey);
 
   const move = (d: number) => {
     const n = ym.y * 12 + (ym.m - 1) + d;
@@ -59,9 +59,9 @@ export function CalendarPage() {
 
   const sel = parseDayKey(selected);
   const selFuture = selected > todayKey;
-  const sum = summarizeDay(intervals, selected, targetMinutes);
+  const selTarget = targetFor(selected);
+  const sum = summarizeDay(intervals, selected, selTarget);
   const wd = WEEK[weekdayOf(selected)];
-  void dayStartMs;
 
   return (
     <>
@@ -79,20 +79,19 @@ export function CalendarPage() {
               ›
             </button>
           </div>
-          <div className="cal-grid" role="grid" aria-label={`${ym.y}年${ym.m}月`}>
+          <div className="cal-grid" aria-label={`${ym.y}年${ym.m}月の日付`}>
             {WEEK.map((w, i) => (
-              <div key={w} className={`cal-dow d${i}`} role="columnheader">
+              <div key={w} className={`cal-dow d${i}`} aria-hidden="true">
                 {w}
               </div>
             ))}
             {Array.from({ length: lead }, (_, i) => (
-              <div key={`b${i}`} role="gridcell" />
+              <div key={`b${i}`} aria-hidden="true" />
             ))}
             {month.days.map((d) => (
               <button
                 key={d.dayKey}
                 type="button"
-                role="gridcell"
                 className={`cal-day d${d.weekday}${d.isToday ? " today" : ""}${d.dayKey === selected ? " selected" : ""}${d.status === "future" ? " future" : ""}`}
                 onClick={() => setSelected(d.dayKey)}
                 aria-pressed={d.dayKey === selected}
@@ -151,7 +150,7 @@ export function CalendarPage() {
                 </div>
                 <div>
                   <dt>目標</dt>
-                  <dd>{fmtDuration(targetMinutes, { short: true })}</dd>
+                  <dd>{fmtDuration(selTarget, { short: true })}</dd>
                 </div>
                 <div>
                   <dt>結果</dt>

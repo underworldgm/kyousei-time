@@ -611,6 +611,9 @@ ul {
   color: var(--coral-dark);
   animation: pulse 1.6s ease-in-out infinite;
 }
+.session-time span {
+  white-space: nowrap;
+}
 .session-time {
   font-size: 15px;
   font-weight: 700;
@@ -624,6 +627,7 @@ ul {
   font-weight: 800;
 }
 .session-dur small {
+  display: block;
   font-size: 11px;
   font-weight: 500;
   color: var(--text-muted);
@@ -822,6 +826,7 @@ ul {
 .detail-kv dd {
   font-size: 15px;
   font-weight: 800;
+  white-space: nowrap;
 }
 .detail-kv dd.big {
   font-size: 20px;
@@ -833,6 +838,7 @@ ul {
   color: #b86a00;
 }
 .detail-kv small {
+  display: block;
   font-size: 12px;
 }
 .praise {
@@ -1060,6 +1066,23 @@ input[type="time"] {
 .dev {
   border-style: dashed;
 }
+.file-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+}
+.file-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.file-btn:focus-within {
+  outline: 3px solid #1c7fd6;
+  outline-offset: 2px;
+}
 .disclaimer {
   padding: 2px 8px 10px;
   font-size: 11px;
@@ -1099,6 +1122,7 @@ input[type="time"] {
   flex: 1;
 }
 .dialog fieldset {
+  min-width: 0;
   margin: 0 0 10px;
   padding: 0;
   border: 0;
@@ -1112,8 +1136,13 @@ input[type="time"] {
 }
 .field-row {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   gap: 8px;
+}
+.field-row input {
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 16px; /* iOS のズーム防止のため 16px 以上 */
 }
 .editor-total {
   padding: 8px 12px;
@@ -1190,7 +1219,37 @@ input[type="time"] {
 
 @media (max-width: 360px) {
   .logo {
-    font-size: 23px;
+    font-size: 22px;
+  }
+  .hero-mascot {
+    width: 74px;
+    height: auto;
+  }
+  .page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .detail-card {
+    padding: 12px 10px;
+  }
+  .session-row {
+    grid-template-columns: 1fr 44px 44px;
+    padding-left: 12px;
+  }
+  .session-icon {
+    display: none;
+  }
+  .session-time {
+    font-size: 14px;
+  }
+  .detail-kv {
+    gap: 6px 10px;
+  }
+  .detail-kv dd {
+    font-size: 14px;
+  }
+  .detail-kv dd.big {
+    font-size: 17px;
   }
   .ring-big {
     font-size: 27px;
