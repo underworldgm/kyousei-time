@@ -119,8 +119,18 @@ function overlap(iv: Interval, from: number, to: number): number {
 export function dayTotalMs(intervals: Interval[], dayKey: string): number {
   const from = dayStartMs(dayKey);
   const to = from + DAY_MS;
+  // intervals は mergeIntervals 済み (開始・終了とも昇順) なので二分探索で開始位置を求める。
+  // カレンダーや連続達成で毎秒何百日分も呼ばれるため、全件走査を避ける。
+  let lo = 0;
+  let hi = intervals.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (intervals[mid].end <= from) lo = mid + 1;
+    else hi = mid;
+  }
   let sum = 0;
-  for (const iv of intervals) {
+  for (let i = lo; i < intervals.length; i++) {
+    const iv = intervals[i];
     if (iv.start >= to) break;
     sum += overlap(iv, from, to);
   }

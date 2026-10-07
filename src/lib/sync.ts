@@ -42,9 +42,19 @@ export function toRemote(rec: AnyRecord): RemoteRow {
   return out;
 }
 
+/** PostgREST の timestamptz ("…+00:00", マイクロ秒) をローカルと同じ ISO 形式 ("…Z") にそろえる */
+function normalizeTime(v: unknown): unknown {
+  if (typeof v !== "string") return v;
+  const ms = Date.parse(v);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : v;
+}
+
 export function fromRemote(row: RemoteRow): AnyRecord & { syncedAt?: string } {
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(row)) out[camel(k)] = v;
+  for (const [k, v] of Object.entries(row)) {
+    const key = camel(k);
+    out[key] = /(Time|At)$/.test(key) ? normalizeTime(v) : v;
+  }
   out.syncStatus = "synced";
   return out as unknown as AnyRecord & { syncedAt?: string };
 }

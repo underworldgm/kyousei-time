@@ -170,3 +170,25 @@ describe("入力検証", () => {
     expect(validateRange(fromJst("2026-10-07", "09:10"), fromJst("2026-10-07", "09:50"), now, [other], "other").ok).toBe(true);
   });
 });
+
+describe("性能", () => {
+  it("3年分 (1日5回) でも連続達成・月集計が十分速く、全件走査と同じ結果", async () => {
+    const { dayTotalMs, addDays } = await import("../src/lib/time");
+    const list: WearSession[] = [];
+    let key = "2023-10-07";
+    for (let d = 0; d < 365 * 3; d++) {
+      for (const [a, b] of [["07:00", "09:00"], ["10:00", "12:00"], ["13:00", "16:00"], ["17:00", "20:00"], ["21:00", "23:30"]]) list.push(S(key, a, b));
+      key = addDays(key, 1);
+    }
+    const now = fromJst("2026-10-07", "12:00");
+    const iv = intervalsOf(list, now);
+    const naive = (k: string) => iv.reduce((s, x) => s + Math.max(0, Math.min(x.end, fromJst(k, "00:00") + 86400000) - Math.max(x.start, fromJst(k, "00:00"))), 0);
+    for (const k of ["2023-10-07", "2025-01-01", "2026-10-06", "2026-10-07", "2026-12-01"]) expect(dayTotalMs(iv, k)).toBe(naive(k));
+    const t0 = performance.now();
+    for (let i = 0; i < 20; i++) {
+      currentStreak(iv, 720, "2026-10-07");
+      summarizeMonth(iv, 2026, 10, 720, "2026-10-07");
+    }
+    expect((performance.now() - t0) / 20).toBeLessThan(15); // 1回あたり 15ms 未満
+  });
+});
