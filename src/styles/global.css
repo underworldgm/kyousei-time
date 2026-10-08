@@ -1286,9 +1286,13 @@ ul {
   font-weight: 700;
   color: var(--text-muted);
 }
+.time-field span {
+  white-space: nowrap;
+}
 .time-field input {
+  flex: 0 1 160px;
   width: auto;
-  min-width: 130px;
+  min-width: 0;
 }
 .time-field input:disabled {
   opacity: 0.5;
