@@ -3,6 +3,7 @@ import { useAppData } from "../app/AppData";
 import { DayRecords } from "../components/DayRecords";
 import { Hero } from "../components/Hero";
 import { Mascot } from "../components/Mascot";
+import { RewardStamp, STAMP_NAMES, stampKindFor } from "../components/RewardStamp";
 import { Ring } from "../components/Ring";
 import { Sparkle } from "../components/Sky";
 import { startWear, stopWear } from "../db/repo";
@@ -170,11 +171,17 @@ export function TimerPage() {
         )}
         {sum.achieved && (
           <section className="card celebrate-card" aria-label="目標達成">
-            <Mascot size={52} mood="cheer" crown />
+            {(settings?.rewardStampEnabled ?? true) ? <RewardStamp dayKey={todayKey} size={56} className="celebrate-stamp" /> : <Mascot size={52} mood="cheer" crown />}
             <p>
               <strong>よくできました！</strong>
               <br />
               今日の目標を達成しました{sum.overMinutes > 0 ? `（+${sum.overMinutes}分）` : ""}
+              {(settings?.rewardStampEnabled ?? true) && (
+                <>
+                  <br />
+                  <small>{STAMP_NAMES[stampKindFor(todayKey)]}のスタンプをカレンダーにおしたよ</small>
+                </>
+              )}
             </p>
           </section>
         )}

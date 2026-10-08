@@ -3,18 +3,13 @@ import { useAppData } from "../app/AppData";
 import { DayRecords } from "../components/DayRecords";
 import { Hero } from "../components/Hero";
 import { Mascot } from "../components/Mascot";
+import { RewardStamp, STAMP_NAMES, stampKindFor } from "../components/RewardStamp";
 import { currentStreak, fmtDuration, parseDayKey, summarizeDay, summarizeMonth, weekdayOf, type CalendarDay } from "../lib/time";
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
 
-function Stamp({ status, enabled }: { status: CalendarDay["status"]; enabled: boolean }) {
-  if (status === "achieved" && enabled)
-    return (
-      <svg className="stamp achieved" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" fill="#e4f8f2" stroke="#2fc3a8" strokeWidth="3.4" />
-        <path d="M7.800 12.300l3 3 5.500-6" fill="none" stroke="#2fc3a8" strokeWidth="2.600" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
+function Stamp({ status, enabled, dayKey }: { status: CalendarDay["status"]; enabled: boolean; dayKey: string }) {
+  if (status === "achieved" && enabled) return <RewardStamp dayKey={dayKey} className="stamp achieved" />;
   if (status === "achieved")
     return (
       <svg className="stamp" viewBox="0 0 24 24" aria-hidden="true">
@@ -99,19 +94,19 @@ export function CalendarPage() {
                 aria-label={`${ym.m}月${d.day}日 ${d.isToday ? "今日 " : ""}${statusLabel[d.status]}${d.status !== "future" && d.minutes ? ` ${fmtDuration(d.minutes)}` : ""}`}
               >
                 <span className="cal-num">{d.day}</span>
-                <Stamp status={d.status} enabled={stampOn} />
+                <Stamp status={d.status} enabled={stampOn} dayKey={d.dayKey} />
               </button>
             ))}
           </div>
           <ul className="legend" aria-label="凡例">
             <li>
-              <Stamp status="achieved" enabled /> 目標達成
+              <RewardStamp dayKey={todayKey} kind="tooth" straight className="stamp" /> 目標達成
             </li>
             <li>
-              <Stamp status="partial" enabled /> 未達成
+              <Stamp status="partial" enabled dayKey={todayKey} /> 未達成
             </li>
             <li>
-              <Stamp status="none" enabled /> 記録なし
+              <Stamp status="none" enabled dayKey={todayKey} /> 記録なし
             </li>
           </ul>
         </section>
@@ -167,7 +162,11 @@ export function CalendarPage() {
               </dl>
               {sum.achieved ? (
                 <p className="praise">
-                  <Mascot size={36} mood="cheer" /> よくできました！
+                  {stampOn ? <RewardStamp dayKey={selected} size={44} className="praise-stamp" /> : <Mascot size={36} mood="cheer" />}
+                  <span>
+                    よくできました！
+                    {stampOn && <small>{STAMP_NAMES[stampKindFor(selected)]}のスタンプをもらったよ</small>}
+                  </span>
                 </p>
               ) : selected !== todayKey && sum.totalMinutes > 0 ? (
                 <p className="praise soft">

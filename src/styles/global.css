@@ -791,8 +791,49 @@ ul {
   width: 24px;
   height: 24px;
 }
-.stamp.achieved {
-  animation: none;
+.cal-day .reward-stamp {
+  width: 30px;
+  height: 30px;
+  margin-top: -2px;
+  filter: drop-shadow(0 1px 1px rgba(80, 120, 140, 0.18));
+}
+.legend .reward-stamp {
+  width: 20px;
+  height: 20px;
+}
+.praise-stamp,
+.celebrate-stamp {
+  flex: none;
+  animation: stamp-in 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.praise small,
+.celebrate-card small {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+.stamp-collection {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  flex-basis: 100%;
+  margin-top: 2px;
+  padding: 8px 4px 2px;
+  border-top: 1px dashed var(--line);
+}
+.stamp-collection li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.stamp-collection.off {
+  filter: grayscale(1);
+  opacity: 0.55;
 }
 .legend {
   display: flex;
@@ -1198,6 +1239,16 @@ input[type="time"] {
 }
 
 /* ---------------------------------------------------------------- motion */
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.8) rotate(-20deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-8deg);
+  }
+}
 @keyframes twinkle {
   0%,
   100% {

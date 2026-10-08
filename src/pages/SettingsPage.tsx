@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAppData } from "../app/AppData";
 import { Hero } from "../components/Hero";
+import { RewardStamp, STAMP_KINDS, STAMP_NAMES } from "../components/RewardStamp";
 import { useAuth } from "../hooks/useAuth";
 import { useInstall } from "../hooks/useInstall";
 import { useSyncState } from "../hooks/useSyncState";
@@ -160,9 +161,17 @@ export function SettingsPage() {
           <span className="bubble pink" aria-hidden="true">⭐</span>
           <div className="row-text">
             <h3>ごほうびスタンプ</h3>
-            <p>目標達成でカレンダーに○スタンプ</p>
+            <p>目標達成でカレンダーにかわいいスタンプ</p>
           </div>
           <Switch checked={stamp} onChange={setStamp} label="ごほうびスタンプ" />
+          <ul className={`stamp-collection${stamp ? "" : " off"}`} aria-label="スタンプのしゅるい">
+            {STAMP_KINDS.map((k) => (
+              <li key={k}>
+                <RewardStamp dayKey="2026-01-01" kind={k} size={40} straight />
+                <span>{STAMP_NAMES[k]}</span>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className="card" aria-labelledby="child-title">
