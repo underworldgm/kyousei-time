@@ -3,10 +3,23 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // プレビュー版 (npm run build:preview): 1ファイルにまとめて claude.ai の Artifact として公開する
+  ...(mode === "artifact"
+    ? {
+        base: "./",
+        build: {
+          outDir: "dist-artifact",
+          assetsInlineLimit: 100_000_000,
+          cssCodeSplit: false,
+          rollupOptions: { input: "preview.html" },
+        },
+      }
+    : {}),
   plugins: [
     react(),
     VitePWA({
+      disable: mode === "artifact",
       registerType: "autoUpdate",
       includeAssets: ["icons/*.png", "icons/*.svg"],
       manifest: {
@@ -48,4 +61,4 @@ export default defineConfig({
     }),
   ],
   test: { environment: "node", include: ["tests/**/*.test.ts"], setupFiles: ["tests/setup.ts"] },
-});
+}));

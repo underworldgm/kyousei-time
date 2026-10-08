@@ -257,9 +257,10 @@ export function SettingsPage() {
             <h3 id="data-title">データ</h3>
           </div>
           <p className="hint">記録をCSVで保存・復元できます（歯科医院への共有・機種変更・バックアップ用）。復元では、すでにある記録と重なるものは追加しません。</p>
-          <button type="button" className="btn outline wide" onClick={exportCsv} disabled={!sessions.length}>
+          <button type="button" className="btn outline wide" onClick={exportCsv} disabled={!sessions.length || !!import.meta.env.VITE_PREVIEW}>
             CSVを書き出す
           </button>
+          {import.meta.env.VITE_PREVIEW && <p className="hint small">プレビュー版ではファイルを保存できません（アプリ本体では使えます）。</p>}
           <label className="btn outline wide file-btn">
             CSVから復元する
             <input

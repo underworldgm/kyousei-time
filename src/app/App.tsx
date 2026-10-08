@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, MemoryRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { PreviewBanner } from "../components/PreviewBanner";
 import { AppDataProvider, useAppData } from "./AppData";
 import { NavBar } from "../components/NavBar";
 import { CalendarPage } from "../pages/CalendarPage";
@@ -35,6 +36,7 @@ function Shell() {
   return (
     <>
       <ScrollToTop />
+      {import.meta.env.VITE_PREVIEW && <PreviewBanner />}
       <div className="screen">
         <Routes>
           <Route path="/" element={<TimerPage />} />
@@ -48,9 +50,12 @@ function Shell() {
   );
 }
 
+// プレビュー版は埋め込み表示で URL を書き換えられないため、画面遷移をメモリ上で管理する
+const Router = import.meta.env.VITE_PREVIEW ? MemoryRouter : BrowserRouter;
+
 export function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <div className="app">
         <AuthProvider>
           <AppDataProvider>
@@ -58,6 +63,6 @@ export function App() {
           </AppDataProvider>
         </AuthProvider>
       </div>
-    </BrowserRouter>
+    </Router>
   );
 }

@@ -49,6 +49,9 @@ DB 名 `kyousei-time`。`profiles / children / settings / sessions / outbox / me
 目標は `dailyTargetMinutes` (分) で保存 (14時間 = 840)。
 実行中のタイマーは **`startTime` のみ保存**し、表示は常に「現在時刻 − startTime」から計算します (setInterval の積算は使わない)。ロック・再起動・更新しても継続します。
 
+## プレビュー版
+`npm run build:preview` で、サンプルの記録入り・クラウド同期なしのプレビュー版を1つの HTML (`dist-artifact/kyousei-time-preview.html`) に書き出します。claude.ai の Artifact などで、インストールせずに画面を試せます。保存領域が使えない埋め込み表示ではメモリ上で動きます (本番ビルドには含まれません)。
+
 ## Supabase / .env
 1. `supabase/README.md` の手順で `migrations/` の SQL (0001〜0003) を番号順に実行
 2. Email (Magic Link) を有効化し、Redirect URL にデプロイ先を追加

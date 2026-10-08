@@ -16,7 +16,9 @@ export class KyouseiDB extends Dexie {
   meta!: Table<MetaRow, string>;
 
   constructor(name = "kyousei-time") {
-    super(name);
+    // プレビュー版のみ: ブラウザの保存領域が使えない環境ではメモリ上の IndexedDB を使う (src/preview-main.tsx)
+    const deps = (globalThis as { __KYOUSEI_IDB_DEPS__?: { indexedDB: IDBFactory; IDBKeyRange: typeof IDBKeyRange } }).__KYOUSEI_IDB_DEPS__;
+    super(name, deps);
     this.version(1).stores({
       profiles: "id,userId",
       children: "id,userId",

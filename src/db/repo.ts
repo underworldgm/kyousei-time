@@ -430,3 +430,79 @@ export async function clearSampleData(): Promise<void> {
   await db.sessions.bulkDelete(ids);
   await setMeta("sampleIds", []);
 }
+
+// ---------------------------------------------------------------- preview build
+
+/** プレビュー版: すべての記録と設定を消して初期状態に戻す */
+export async function clearAllLocalData(): Promise<void> {
+  if (!import.meta.env.VITE_PREVIEW && !import.meta.env.DEV) return;
+  await db.transaction("rw", [db.profiles, db.children, db.settings, db.sessions, db.outbox, db.meta], async () => {
+    await Promise.all([db.profiles.clear(), db.children.clear(), db.settings.clear(), db.sessions.clear(), db.outbox.clear(), db.meta.clear()]);
+    await setMeta("previewSeeded", true);
+  });
+  await ensureBootstrap();
+  emitWrite();
+}
+
+/**
+ * プレビュー版: 初回だけ、直近およそ5週間分のサンプル記録を入れる (1日に複数回の着脱・未達成の日・日付またぎを含む)。
+ * force = true なら既に入れていても入れ直す。
+ */
+export async function seedPreviewData(force = false): Promise<void> {
+  if (!import.meta.env.VITE_PREVIEW) return;
+  if (!force && (await getMeta<boolean>("previewSeeded"))) return;
+  const id = await getIdentity();
+  const now = Date.now();
+  const todayKey = dayKeyOf(now);
+  const day = (n: number) => dayKeyOf(Date.parse(`${todayKey}T12:00:00+09:00`) - n * 86_400_000);
+  const at = (key: string, hm: string) => Date.parse(`${key}T${hm}:00+09:00`);
+  // よくある使い方: 夜は寝るときに付けて翌朝まで (日付またぎ)、夕方にも少し。
+  // 夜 20:00→翌 07:00 は前日 4時間 + 当日 7時間 に分かれて集計される。
+  const afternoons: [string, string][][] = [
+    [["15:00", "18:00"]], // 合計 14時間 → 達成
+    [["15:30", "18:00"]], // 13時間30分 → 未達成
+    [["14:30", "18:00"]], // 14時間30分
+    [["12:00", "13:00"], ["15:00", "18:00"]], // 15時間
+    [["15:00", "18:30"]],
+    [["14:00", "18:10"]],
+    [["15:00", "18:20"]],
+  ];
+  const rows: { s: number; e: number }[] = [];
+  for (let n = 35; n >= 1; n--) {
+    const key = day(n);
+    if (n % 17 === 9) {
+      // 記録なしの日 (旅行などで外していた)。夜中に帰って翌日の 0時から付け直した
+      rows.push({ s: at(day(n - 1), "00:00"), e: at(day(n - 1), "07:00") });
+      continue;
+    }
+    for (const [s, e] of afternoons[(n + 3) % afternoons.length]) rows.push({ s: at(key, s), e: at(key, e) });
+    // 記録なしの日の前夜は日付が変わる前に外した
+    const nightEnd = (n - 1) % 17 === 9 ? at(day(n - 1), "00:00") : at(day(n - 1), "07:00");
+    rows.push({ s: at(key, "20:00"), e: nightEnd });
+  }
+  const ts = nowIso(now);
+  await db.transaction("rw", [db.sessions, db.children, db.meta], async () => {
+    // 重なる区間 (日付またぎの翌朝と次の日の朝) は除く
+    rows.sort((a, b) => a.s - b.s);
+    let lastEnd = 0;
+    for (const r of rows) {
+      if (r.s < lastEnd || r.e > now) continue;
+      lastEnd = r.e;
+      await db.sessions.put({
+        id: uuid(),
+        userId: id.userId,
+        childId: id.childId,
+        startTime: nowIso(r.s),
+        endTime: nowIso(r.e),
+        createdAt: ts,
+        updatedAt: ts,
+        deletedAt: null,
+        syncStatus: "synced",
+      });
+    }
+    const child = await db.children.get(id.childId);
+    if (child) await db.children.put({ ...child, name: "みなちゃん", icon: "🐰", updatedAt: ts });
+    await setMeta("previewSeeded", true);
+  });
+  emitWrite();
+}
