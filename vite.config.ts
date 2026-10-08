@@ -42,6 +42,8 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         // アプリシェル: precache (Cache First)。古い版は自動で破棄し、新SWは即時有効化。
         cleanupOutdatedCaches: true,
+        // Web Push の受信処理 (public/push-sw.js)
+        importScripts: ["push-sw.js"],
         clientsClaim: true,
         skipWaiting: true,
         navigateFallback: "/index.html",

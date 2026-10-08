@@ -73,12 +73,13 @@ export class MockSupabase {
       const body = JSON.parse(req.postData() ?? "[]");
       for (const row of Array.isArray(body) ? body : [body]) {
         if (row.user_id !== this.uid) return this.json(route, 403, { message: "new row violates row-level security policy" });
-        const old = t.get(row.id);
-        if (old && Date.parse(row.updated_at) < Date.parse(old.updated_at as string)) continue; // LWW
+        const key = (row.id as string | undefined) ?? `${row.child_id}:${row.kind}`; // push_schedules は (child_id, kind) が主キー
+        const old = t.get(key);
+        if (old && row.id && Date.parse(row.updated_at) < Date.parse(old.updated_at as string)) continue; // LWW
         // PostgREST は "+00:00" 形式でマイクロ秒を返す
         this.clock++;
         const synced = new Date(Date.UTC(2030, 0, 1) + this.clock * 1000).toISOString().replace("Z", "+00:00");
-        t.set(row.id, { ...row, synced_at: synced });
+        t.set(key, { ...row, synced_at: synced });
       }
       return this.json(route, 201, undefined);
     }

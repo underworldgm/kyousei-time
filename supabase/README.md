@@ -1,7 +1,7 @@
 # Supabase セットアップ
 
 1. https://supabase.com でプロジェクトを作成
-2. SQL Editor で `migrations/` の SQL を番号順 (0001 → 0002 → 0003) に実行
+2. SQL Editor で `migrations/` の SQL を番号順 (0001 → 0005) に実行
    (Supabase CLI の場合: `supabase link --project-ref <ref>` → `supabase db push`)
 3. Authentication → Providers → Email を有効化 (Magic Link)
 4. Authentication → URL Configuration の Site URL / Redirect URLs にデプロイ先URLと `http://localhost:5173` を追加
@@ -9,3 +9,5 @@
    `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` に設定 (service_role キーは絶対に使わない)
 
 `schema.sql` は全 migration を結合した参照用スナップショットです。
+
+Web Push (アプリを閉じていても届く通知) を使う場合は、プロジェクト直下の README「Web Push の設定手順」を参照。

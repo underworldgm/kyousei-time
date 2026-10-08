@@ -23,5 +23,6 @@ Node 20 以上。`main` に直接コミットせず、`claude/<task>` ブラン�
 - 完了(2回目): CSV復元、目標時間の履歴 (migration 0003)、1分未満の押しまちがい破棄、320〜375px幅のレイアウト修正、本番ビルドでのリロード復元・オフライン動作の自動確認
 - 完了(3回目): 自動検証の整備 — PGlite で SQL/RLS 検証、Playwright E2E (本番ビルド+SW、iPhone SE/15、axe)、モック Supabase で2端末同期 E2E、GitHub Actions CI。認証まわりの不具合修正 (ログイン監視の常駐化・ログアウト・アカウント切替時のデータ保護)、API を SW キャッシュ対象外に、丸ゴシック同梱、WCAG AA コントラスト
 - 検証コマンド: `npm run lint && npm test && npm run e2e` (CT303 では初回 `npx playwright install --with-deps chromium`)
-- 未実施: 実Supabaseプロジェクトでの結合確認、実機(iOS/Android)確認、PDF出力、Web Push、複数の子どもの切替UI
+- 完了(4回目): 目標30分単位、通知の細かい設定 (リマインダー・通知音・アイコンのしるし)、複数の子ども、グラフ画面、月ごとのレポート (印刷/PDF)、Web Push (migration 0004/0005、Edge Function send-push)
+- 未実施: 実Supabaseプロジェクトでの結合確認・Web Push の実送信確認、実機(iOS/Android)確認
 - 旧実装 (素のHTML/JS) は `legacy/` に残してあります。

@@ -146,6 +146,31 @@ function pgRemote(uid: string): Remote {
   };
 }
 
+describe("Web Push のテーブル", () => {
+  it("送信予定・端末登録は本人だけが読み書きでき、子ども×種類で1行に上書きされる", async () => {
+    const up = (uid: string, sendAt: string | null) =>
+      as(uid, () =>
+        db.query(
+          `insert into public.push_schedules (user_id, child_id, kind, send_at, body, repeat_daily) values ($1, $1, 'reminder', $2, 'r', true)
+           on conflict (child_id, kind) do update set send_at = excluded.send_at`,
+          [uid, sendAt],
+        ),
+      );
+    await up(A, "2026-10-07T11:00:00Z");
+    await up(A, "2026-10-08T11:00:00Z");
+    const mine = await as(A, () => db.query<{ send_at: Date }>(`select send_at from public.push_schedules`));
+    expect(mine.rows).toHaveLength(1);
+    expect(mine.rows[0].send_at.toISOString()).toBe("2026-10-08T11:00:00.000Z");
+    expect((await as(B, () => db.query(`select * from public.push_schedules`))).rows).toHaveLength(0);
+    await expect(
+      as(B, () => db.query(`insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://push/x', 'p', 'a')`, [A])),
+    ).rejects.toThrow(/row-level security/);
+    await as(A, () => db.query(`insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ($1, 'https://push/a', 'p', 'a')`, [A]));
+    expect((await as(B, () => db.query(`delete from public.push_subscriptions`))).affectedRows ?? 0).toBe(0);
+    expect((await as(A, () => db.query(`select * from public.push_subscriptions`))).rows).toHaveLength(1);
+  });
+});
+
 describe("クライアント同期 ↔ 実スキーマ", () => {
   it("ログイン後の全レコードが送信でき、別端末で取得できる", async () => {
     await localDb.delete();

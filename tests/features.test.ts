@@ -111,3 +111,85 @@ describe("通知の設定", () => {
     expect((await saveSettings({ dailyTargetMinutes: 870 })).dailyTargetMinutes).toBe(870);
   });
 });
+
+describe("Web Push の送信予定", () => {
+  const base = {
+    childId: "c1",
+    childName: "みな",
+    todayKey: "2026-10-07",
+    targetMinutes: 840,
+    notificationsEnabled: true,
+    reminderEnabled: true,
+    reminderTime: "20:00",
+    notificationSound: true,
+  };
+  it("装着中は目標達成の時刻、外していれば取り消し", async () => {
+    const { computePushSchedules } = await import("../src/lib/pushSchedule");
+    const now = fromJst("2026-10-07", "18:00");
+    const iv = intervalsOf([S("2026-10-07", "08:00", "13:00"), { ...S("2026-10-07", "18:00", "18:00"), endTime: null }], now);
+    const [goal, rem] = computePushSchedules({ ...base, intervals: iv, wearing: true, now });
+    expect(goal.sendAt).toBe(new Date(fromJst("2026-10-08", "03:00")).toISOString()); // 5時間済み → 翌03:00
+    expect(goal.body).toContain("みなの");
+    // 20:00 には未達成の見込み → 今日のリマインダーを送る
+    expect(rem.sendAt).toBe(new Date(fromJst("2026-10-07", "20:00")).toISOString());
+    expect(rem.repeatDaily).toBe(true);
+    const off = computePushSchedules({ ...base, intervals: iv, wearing: false, now });
+    expect(off[0].sendAt).toBeNull();
+  });
+  it("リマインダーの時刻までに届く見込み・達成済み・時刻を過ぎた → 明日", async () => {
+    const { computePushSchedules } = await import("../src/lib/pushSchedule");
+    const tomorrow = new Date(fromJst("2026-10-08", "20:00")).toISOString();
+    const now = fromJst("2026-10-07", "19:00");
+    const nearly = intervalsOf([S("2026-10-07", "05:00", "18:30"), { ...S("2026-10-07", "18:40", "18:40"), endTime: null }], now);
+    expect(computePushSchedules({ ...base, intervals: nearly, wearing: true, now })[1].sendAt).toBe(tomorrow);
+    const done = intervalsOf([S("2026-10-07", "04:00", "18:30")], now);
+    expect(computePushSchedules({ ...base, intervals: done, wearing: false, now })[1].sendAt).toBe(tomorrow);
+    const late = fromJst("2026-10-07", "21:00");
+    expect(computePushSchedules({ ...base, intervals: [], wearing: false, now: late })[1].sendAt).toBe(tomorrow);
+    expect(computePushSchedules({ ...base, reminderEnabled: false, intervals: [], wearing: false, now })[1].sendAt).toBeNull();
+  });
+  it("通知音なしの設定が silent に反映される", async () => {
+    const { computePushSchedules } = await import("../src/lib/pushSchedule");
+    const r = computePushSchedules({ ...base, notificationSound: false, intervals: [], wearing: false, now: fromJst("2026-10-07", "10:00") });
+    expect(r.every((s) => s.silent)).toBe(true);
+  });
+});
+
+describe("Web Push の送信処理 (Edge Function の中身)", () => {
+  it("期限の来た予定を全端末へ送り、goal は取り消し・リマインダーは翌日へ、無効な端末は削除", async () => {
+    const { runPush } = await import("../supabase/functions/send-push/core");
+    const now = Date.parse("2026-10-07T11:00:30Z");
+    const rows = [
+      { user_id: "u", child_id: "c", kind: "goal" as const, send_at: "2026-10-07T11:00:00Z", title: "t", body: "b", silent: false, repeat_daily: false },
+      { user_id: "u", child_id: "c", kind: "reminder" as const, send_at: "2026-10-07T11:00:00Z", title: "t", body: "r", silent: true, repeat_daily: true },
+      { user_id: "u", child_id: "d", kind: "reminder" as const, send_at: "2026-10-06T23:00:00Z", title: "t", body: "old", silent: false, repeat_daily: true },
+    ];
+    const sent: string[] = [];
+    const deleted: string[] = [];
+    const marked: [string, string | null][] = [];
+    const r = await runPush(
+      {
+        dueSchedules: async () => rows,
+        subscriptionsFor: async () => [
+          { id: "s1", user_id: "u", endpoint: "e1", p256dh: "p", auth: "a" },
+          { id: "s2", user_id: "u", endpoint: "e2", p256dh: "p", auth: "a" },
+        ],
+        send: async (sub, payload) => {
+          sent.push(`${sub.id}:${JSON.parse(payload).body}`);
+          return sub.id === "s2" ? 410 : 201;
+        },
+        deleteSubscription: async (id) => void deleted.push(id),
+        markSent: async (row, next) => void marked.push([`${row.child_id}-${row.kind}`, next]),
+      },
+      now,
+    );
+    expect(sent).toEqual(["s1:b", "s2:b", "s1:r", "s2:r"]); // 6時間以上前の古い予定は送らない
+    expect(deleted).toEqual(["s2", "s2"]);
+    expect(r).toMatchObject({ schedules: 3, sent: 2, removedSubscriptions: 2 });
+    expect(marked).toEqual([
+      ["c-goal", null],
+      ["c-reminder", "2026-10-08T11:00:00.000Z"],
+      ["d-reminder", "2026-10-07T23:00:00.000Z"],
+    ]);
+  });
+});

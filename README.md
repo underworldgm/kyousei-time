@@ -10,7 +10,11 @@
 - 1日に複数回の着脱 (1回の装着 = 1 `WearSession`)、今日の合計・残り・終了予定、記録の追加/修正/論理削除
 - 日付またぎ (Asia/Tokyo 基準で日別に分割集計)、連続達成、月間達成、7日/30日集計 (`rangeStats`)
 - ごほうびスタンプ (オリジナルの絵柄6種類: はのこ・ほし・おはな・ハート・おうかん・にじ。日付ごとに絵柄が決まる)、達成演出 (`prefers-reduced-motion` 対応)、通知、CSV 書き出し・復元
-- 目標時間の変更履歴: 目標を変えても、過去日の達成判定はその日に有効だった目標で行う
+- 目標時間の変更履歴: 目標を変えても、過去日の達成判定はその日に有効だった目標で行う (目標は30分単位)
+- グラフ画面 (週・月・3か月、達成日数・平均・最長/最短・最近7日間)
+- 月ごとのレポート (PDF保存・印刷)
+- 複数の子ども (追加・切り替え、記録・目標・通知は子どもごと)
+- 通知: 目標達成・毎日のリマインダー (時刻指定)・通知音あり/なし・アイコンのしるし (Badge API)・アプリを閉じていても届く Web Push
 - 開始から1分未満で終了した装着は押しまちがいとして記録しない (論理削除)
 
 ## 技術構成
@@ -25,6 +29,9 @@ src/
   lib/time.ts               時間計算 (純粋関数)
   lib/validation.ts         入力検証
   lib/sync.ts               同期エンジン (outbox / pull / LWW)
+  lib/stats.ts              グラフ用の集計
+  lib/push.ts, pushSchedule.ts  Web Push の登録と送信予定
+supabase/functions/send-push  Web Push を送る Edge Function
   lib/remoteSupabase.ts     Supabase 実装
 supabase/migrations/        スキーマ + RLS
 tests/                      時間計算・オフライン・同期テスト
@@ -95,7 +102,26 @@ Web Notifications を使用 (HTTPS または localhost 必須)。設定で ON �
 | iOS | ホーム画面に追加した PWA (iOS 16.4+) のみ通知可 |
 | 許可が拒否・非対応 | 画面内の表示のみ |
 
-閉じている間も確実に通知するには **Web Push** が必要です。将来: Supabase Edge Function + `push_subscriptions` テーブル + VAPID 鍵で、装着開始時に「終了予定時刻」の通知をサーバー側で予約し、SW の `push` イベントで表示します (終了予定は `expectedGoalTime` で計算済み)。
+アプリを閉じていても届けるために **Web Push** に対応しています (設定 → 通知の設定 →「アプリを閉じていても通知」。ログインが必要)。
+- アプリは装着開始・終了・設定変更のたびに「送信予定」(目標達成の見込み時刻・毎日のリマインダー) を `push_schedules` に書き込みます
+- Supabase Edge Function `send-push` が1分ごとに起動し、時刻の来た予定を登録済みの全端末へ送ります (目標達成は1回、リマインダーは翌日へ繰り越し、無効になった端末は自動削除)
+- iPhone はホーム画面に追加したアプリ (iOS 16.4+) のみ。Android / PC の Chrome・Edge・Firefox は対応
+
+### Web Push の設定手順 (管理者向け・1回だけ)
+1. VAPID 鍵を作る: `npx web-push generate-vapid-keys`
+2. `.env` (とデプロイ先の環境変数) に公開鍵: `VITE_VAPID_PUBLIC_KEY=...`
+3. `supabase/migrations/0005_web_push.sql` を実行
+4. 関数をデプロイ: `supabase functions deploy send-push --no-verify-jwt`
+5. secrets を設定: `supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com CRON_SECRET=(ランダムな長い文字列)`
+6. 1分ごとの実行 (SQL Editor、`pg_cron` と `pg_net` を有効化してから):
+   ```sql
+   select cron.schedule('kyousei-send-push', '* * * * *', $$
+     select net.http_post(
+       url := 'https://<project-ref>.supabase.co/functions/v1/send-push',
+       headers := jsonb_build_object('Authorization', 'Bearer <CRON_SECRET>')
+     ) $$);
+   ```
+VAPID 秘密鍵・CRON_SECRET は Git に入れないでください。
 
 ## デプロイ
 `npm run build` の `dist/` を Vercel / Cloudflare Pages / Netlify に配置。SPA フォールバック (`vercel.json`, `public/_redirects`) と、`sw.js`・`index.html` を毎回確認させるキャッシュ設定 (`public/_headers`, `vercel.json`) を同梱しているので、新しい版を出すと次回起動時に自動で更新されます。ビルド設定: コマンド `npm run build`、出力 `dist`、Node 20 以上。環境変数 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` を設定。Supabase の Redirect URL にデプロイ先を追加。
@@ -113,6 +139,8 @@ Web Notifications を使用 (HTTPS または localhost 必須)。設定で ON �
 
 ## 既知の制限 / 今後の改善
 - 目標履歴の導入前に記録された日は、導入時点 (最初の変更前) の目標で判定
-- PDF 出力、Web Push、複数の子どもの切り替えUI、グラフ画面は未実装
+- 子どもの削除は未対応 (名前とアイコンの変更は可)
+- Web Push の実送信は実際の Supabase プロジェクトと VAPID 鍵の設定後に確認が必要 (送信処理・予定の計算・テーブル権限は自動テスト済み)
+- PDF は端末の印刷機能で保存 (アプリ内で直接 PDF ファイルは作らない)
 - 実 Supabase プロジェクト・実機 iOS/Android での確認は未実施
 - 日付は Asia/Tokyo 固定

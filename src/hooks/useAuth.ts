@@ -3,6 +3,8 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { adoptAuthUser, markSignedOut } from "../db/repo";
 import { requestSync, setSignedOut } from "../lib/sync";
+import { disablePush } from "../lib/push";
+import { getMeta, setMeta } from "../db/indexedDb";
 
 export interface AuthState {
   session: Session | null;
@@ -68,6 +70,11 @@ function useAuthState(): AuthState {
   }, []);
 
   const signOut = useCallback(async () => {
+    // この端末へのクラウド通知も止める (ログイン中でないと登録を消せないので先に)
+    if (await getMeta<boolean>("pushEnabled").catch(() => false)) {
+      await disablePush();
+      await setMeta("pushEnabled", false).catch(() => undefined);
+    }
     await supabase?.auth.signOut();
   }, []);
 

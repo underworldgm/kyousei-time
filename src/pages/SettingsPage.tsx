@@ -10,15 +10,17 @@ import { addChild, clearSampleData, importIntervals, saveChild, saveSettings, se
 import { parseSessionsCsv } from "../lib/csv";
 import { cloudConfigured } from "../lib/supabase";
 import { ensurePermission, permissionState, showNotification } from "../lib/notifications";
+import { disablePush, enablePush, pushConfigured } from "../lib/push";
+import { getMeta, setMeta } from "../db/indexedDb";
 import { requestSync } from "../lib/sync";
 import { fmtDuration, jstHM, sessionsToCsv, dayKeyOf } from "../lib/time";
 
 const ICONS = ["🦷", "🌟", "🐰", "🐱", "🐻"];
 
-function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+function Switch({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
-    <label className="switch">
-      <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} aria-label={label} />
+    <label className={`switch${disabled ? " disabled" : ""}`}>
+      <input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} aria-label={label} />
       <span className="track" aria-hidden="true">
         <span className="knob" />
       </span>
@@ -100,6 +102,30 @@ export function SettingsPage() {
     }
     const ok = await showNotification("きょうせいタイム", "これは ためしの通知です。", "test", { sound });
     setNotifyMsg(ok ? "通知を送りました。届いたか確認してください。" : "通知を表示できませんでした。");
+  };
+
+  const [pushOn, setPushOn] = useState(false);
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
+  useEffect(() => {
+    void getMeta<boolean>("pushEnabled").then((v) => setPushOn(!!v)).catch(() => undefined);
+  }, []);
+  const togglePush = async (v: boolean) => {
+    setPushMsg(null);
+    if (v) {
+      if (!auth.session) return;
+      const r = await enablePush(auth.session.user.id);
+      if (!r.ok) {
+        setPushMsg(r.error);
+        return;
+      }
+      await setMeta("pushEnabled", true);
+      setPushOn(true);
+      setPushMsg("この端末にクラウド通知を届けます。");
+    } else {
+      await disablePush();
+      await setMeta("pushEnabled", false);
+      setPushOn(false);
+    }
   };
 
   const badgeSupported = typeof navigator !== "undefined" && "setAppBadge" in navigator;
@@ -235,7 +261,20 @@ export function SettingsPage() {
             ためしに通知する
           </button>
           {(notifyMsg || ((notify || reminder) && perm === "default")) && <p className="hint">{notifyMsg ?? "オンにすると、ブラウザの通知許可を求めます。"}</p>}
-          <p className="hint small">アプリを閉じている間の通知は、ログインしてクラウド通知を使うと届きます（対応端末のみ）。</p>
+          <div className="setting-row">
+            <div className="row-text">
+              <h4>アプリを閉じていても通知</h4>
+              <p>
+                {!pushConfigured
+                  ? "クラウド通知は未設定です（管理者向け: README の Web Push の手順）"
+                  : !auth.session
+                    ? "ログインすると使えます（下の「バックアップと同期」）"
+                    : "この端末で、アプリを閉じていても目標達成とリマインダーが届きます"}
+              </p>
+            </div>
+            <Switch checked={pushOn} onChange={(v) => void togglePush(v)} label="アプリを閉じていても通知" disabled={!pushConfigured || !auth.session} />
+          </div>
+          {pushMsg && <p className="hint">{pushMsg}</p>}
         </section>
 
         <section className="card row-card" aria-label="ごほうびスタンプ">

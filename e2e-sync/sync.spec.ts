@@ -122,3 +122,48 @@ test("サーバー停止中は同期エラーを表示し、記録は端末に�
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await expect.poll(() => server.rows("wear_sessions").length, { timeout: 15_000 }).toBe(1);
 });
+
+test("クラウド通知: 装着開始で目標達成の予定が送られ、外すと取り消される", async ({ browser }) => {
+  const server = new MockSupabase("8d8d8d8d-1111-4222-8333-444455556666");
+  const ctx = await browser.newContext();
+  await server.attach(ctx);
+  const page = await ctx.newPage();
+  await login(page, server);
+  // ヘッドレスでは実際の Push 購読はできないため、この端末で有効にした状態を再現する
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open("kyousei-time");
+        req.onsuccess = () => {
+          const tx = req.result.transaction("meta", "readwrite");
+          tx.objectStore("meta").put({ key: "pushEnabled", value: true });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+  );
+  await page.reload();
+  const goal = () => server.rows("push_schedules").find((r) => r.kind === "goal");
+  await expect.poll(() => !!goal()).toBe(true);
+  expect(goal()!.send_at).toBeNull(); // 外している間は送らない
+
+  await page.getByRole("button", { name: "装着開始" }).click();
+  await expect.poll(() => goal()?.send_at ?? null, { timeout: 10_000 }).not.toBeNull();
+  const eta = Date.parse(goal()!.send_at as string);
+  expect(Math.abs(eta - (Date.now() + 14 * 3600_000))).toBeLessThan(5 * 60_000); // 今 + 14時間
+  expect(goal()!.body).toContain("目標の装着時間になりました");
+
+  // 1分未満の装着は記録しないので、開始時刻を1時間前に直してから外す
+  const d = new Date(Date.now() + 9 * 3600_000 - 3600_000);
+  const hm = `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+  await page.locator(".session-row.active").getByRole("button", { name: /編集/ }).click();
+  const dlg = page.locator("dialog[open]");
+  await dlg.getByLabel("開始日").fill(d.toISOString().slice(0, 10));
+  await dlg.getByLabel("開始時刻").fill(hm);
+  await dlg.getByRole("button", { name: "保存" }).click();
+  await expect.poll(() => Date.parse((goal()?.send_at as string) ?? "0"), { timeout: 10_000 }).toBeLessThan(eta - 50 * 60_000); // 予定も1時間早まる
+  await page.getByRole("button", { name: "装着終了" }).click();
+  await expect.poll(() => goal()?.send_at === null, { timeout: 10_000 }).toBe(true);
+  const rem = server.rows("push_schedules").find((r) => r.kind === "reminder");
+  expect(rem?.send_at).toBeNull(); // リマインダーは初期設定でオフ
+});

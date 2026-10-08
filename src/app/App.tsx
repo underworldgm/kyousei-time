@@ -10,6 +10,7 @@ import { SettingsPage } from "../pages/SettingsPage";
 import { TimerPage } from "../pages/TimerPage";
 import { useAppBadge, useGoalNotifier, useReminder } from "../hooks/useGoalNotifier";
 import { AuthProvider } from "../hooks/useAuth";
+import { usePushSchedules } from "../hooks/usePushSchedules";
 
 /** タブを切り替えたら先頭から表示する (上部の歯のキャラクターを隠さない) */
 function ScrollToTop() {
@@ -27,6 +28,7 @@ function Shell() {
   useGoalNotifier(data);
   useReminder(data);
   useAppBadge(data);
+  usePushSchedules(data);
   if (data.error) {
     return (
       <div className="fatal" role="alert">
