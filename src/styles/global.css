@@ -1673,3 +1673,175 @@ input[type="time"] {
   font-weight: 800;
   font-size: 12px;
 }
+
+/* ---------------------------------------------------------------- report (印刷 / PDF) */
+.link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  text-decoration: none;
+}
+.screen.report-screen {
+  padding-bottom: 24px;
+}
+.report {
+  padding: calc(12px + env(safe-area-inset-top)) 16px 16px;
+}
+.report-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.report-tools .hint {
+  flex-basis: 100%;
+}
+.report-month {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+  margin-right: auto;
+}
+.report-sheet {
+  padding: 16px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  color: #14233e;
+  font-size: 13px;
+}
+.report-head h1 {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.report-head dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+.report-head dl div {
+  display: flex;
+  gap: 6px;
+}
+.report-head dt {
+  color: #56647a;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.report-head dd {
+  font-weight: 800;
+}
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+.report-summary div {
+  padding: 8px;
+  border: 1px solid #d9e6ec;
+  border-radius: 8px;
+}
+.report-summary p,
+.report-summary span {
+  font-size: 11px;
+  color: #56647a;
+}
+.report-summary strong {
+  display: block;
+  font-size: 16px;
+}
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.report-table th,
+.report-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid #e3edf2;
+  text-align: left;
+  vertical-align: top;
+}
+.report-table thead th {
+  background: #f1f7fa;
+  font-size: 11px;
+}
+.report-table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.report-table tbody th {
+  white-space: nowrap;
+}
+.report-table tr.sun th {
+  color: #c63d30;
+}
+.report-table tr.sat th {
+  color: #2366b5;
+}
+.report-table .ranges {
+  font-size: 11px;
+  color: #3b4a60;
+}
+.report-foot {
+  margin-top: 10px;
+  font-size: 10px;
+  color: #56647a;
+}
+@media (max-width: 420px) {
+  .report-sheet {
+    padding: 10px;
+  }
+  .report-table .ranges {
+    display: none;
+  }
+  .report-table thead th:last-child {
+    display: none;
+  }
+}
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+  body,
+  .app {
+    background: #fff !important;
+    box-shadow: none !important;
+    max-width: none;
+  }
+  .no-print,
+  .nav,
+  .preview-banner {
+    display: none !important;
+  }
+  .report {
+    padding: 0;
+  }
+  .report-sheet {
+    border: 0;
+    padding: 0;
+  }
+  .report-table .ranges,
+  .report-table thead th:last-child {
+    display: table-cell !important;
+  }
+  .report-table tr {
+    break-inside: avoid;
+  }
+  /* 31日分 + まとめが A4 1枚に収まるように */
+  .report-table th,
+  .report-table td {
+    padding: 2.5px 6px;
+    font-size: 11px;
+  }
+  .report-summary {
+    margin: 8px 0;
+  }
+}

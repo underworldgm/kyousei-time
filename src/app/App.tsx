@@ -5,6 +5,7 @@ import { AppDataProvider, useAppData } from "./AppData";
 import { NavBar } from "../components/NavBar";
 import { CalendarPage } from "../pages/CalendarPage";
 import { StatsPage } from "../pages/StatsPage";
+import { ReportPage } from "../pages/ReportPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { TimerPage } from "../pages/TimerPage";
 import { useAppBadge, useGoalNotifier, useReminder } from "../hooks/useGoalNotifier";
@@ -21,6 +22,8 @@ function ScrollToTop() {
 
 function Shell() {
   const data = useAppData();
+  // 印刷用レポートはナビなしで表示
+  const isReport = useLocation().pathname === "/report";
   useGoalNotifier(data);
   useReminder(data);
   useAppBadge(data);
@@ -39,17 +42,18 @@ function Shell() {
   return (
     <>
       <ScrollToTop />
-      {import.meta.env.VITE_PREVIEW && <PreviewBanner />}
-      <div className="screen">
+      {import.meta.env.VITE_PREVIEW && !isReport && <PreviewBanner />}
+      <div className={isReport ? "screen report-screen" : "screen"}>
         <Routes>
           <Route path="/" element={<TimerPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/report" element={<ReportPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
-      <NavBar />
+      {!isReport && <NavBar />}
     </>
   );
 }

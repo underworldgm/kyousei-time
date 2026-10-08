@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAppData } from "../app/AppData";
 import { Hero } from "../components/Hero";
 import { RewardStamp, STAMP_KINDS, STAMP_NAMES } from "../components/RewardStamp";
@@ -385,11 +386,14 @@ export function SettingsPage() {
             <span className="bubble mint" aria-hidden="true">📄</span>
             <h3 id="data-title">データ</h3>
           </div>
-          <p className="hint">記録をCSVで保存・復元できます（歯科医院への共有・機種変更・バックアップ用）。復元では、すでにある記録と重なるものは追加しません。</p>
+          <p className="hint">記録をPDF（月ごとのレポート）やCSVで保存できます。歯科医院への共有・機種変更・バックアップに使えます。復元では、すでにある記録と重なるものは追加しません。</p>
           <button type="button" className="btn outline wide" onClick={exportCsv} disabled={!sessions.length || !!import.meta.env.VITE_PREVIEW}>
             CSVを書き出す
           </button>
           {import.meta.env.VITE_PREVIEW && <p className="hint small">プレビュー版ではファイルを保存できません（アプリ本体では使えます）。</p>}
+          <Link className="btn outline wide link-btn" to="/report">
+            PDFで保存（月ごとのレポート）
+          </Link>
           <label className="btn outline wide file-btn">
             CSVから復元する
             <input
