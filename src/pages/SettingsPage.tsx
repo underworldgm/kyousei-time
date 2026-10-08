@@ -5,10 +5,10 @@ import { RewardStamp, STAMP_KINDS, STAMP_NAMES } from "../components/RewardStamp
 import { useAuth } from "../hooks/useAuth";
 import { useInstall } from "../hooks/useInstall";
 import { useSyncState } from "../hooks/useSyncState";
-import { clearSampleData, importIntervals, saveChild, saveSettings, seedSampleData } from "../db/repo";
+import { clearSampleData, importIntervals, saveChild, saveSettings, seedSampleData, withSettingDefaults } from "../db/repo";
 import { parseSessionsCsv } from "../lib/csv";
 import { cloudConfigured } from "../lib/supabase";
-import { ensurePermission, permissionState } from "../lib/notifications";
+import { ensurePermission, permissionState, showNotification } from "../lib/notifications";
 import { requestSync } from "../lib/sync";
 import { fmtDuration, jstHM, sessionsToCsv, dayKeyOf } from "../lib/time";
 
@@ -33,6 +33,10 @@ export function SettingsPage() {
   const [minutes, setMinutes] = useState(settings?.dailyTargetMinutes ?? targetMinutes);
   const [notify, setNotify] = useState(true);
   const [stamp, setStamp] = useState(true);
+  const [reminder, setReminder] = useState(false);
+  const [reminderTime, setReminderTime] = useState("20:00");
+  const [sound, setSound] = useState(true);
+  const [badge, setBadge] = useState(true);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("🦷");
   const [saved, setSaved] = useState<string | null>(null);
@@ -44,9 +48,14 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (!settings) return;
-    setMinutes(settings.dailyTargetMinutes);
-    setNotify(settings.notificationsEnabled);
-    setStamp(settings.rewardStampEnabled);
+    const st = withSettingDefaults(settings);
+    setMinutes(st.dailyTargetMinutes);
+    setNotify(st.notificationsEnabled);
+    setStamp(st.rewardStampEnabled);
+    setReminder(st.reminderEnabled);
+    setReminderTime(st.reminderTime);
+    setSound(st.notificationSound);
+    setBadge(st.badgeEnabled);
   }, [settings?.id, settings?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (child) {
@@ -57,7 +66,8 @@ export function SettingsPage() {
 
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  const step = (d: number) => setMinutes((m) => Math.min(24 * 60, Math.max(60, m + d * 60)));
+  // 30分単位 (1〜24時間)
+  const step = (d: number) => setMinutes((m) => Math.min(24 * 60, Math.max(60, Math.round((m + d * 30) / 30) * 30)));
 
   const toggleNotify = async (v: boolean) => {
     setNotify(v);
@@ -69,9 +79,38 @@ export function SettingsPage() {
     }
   };
 
+  const toggleReminder = async (v: boolean) => {
+    setReminder(v);
+    setNotifyMsg(null);
+    if (v) {
+      const p = await ensurePermission();
+      if (p === "denied") setNotifyMsg("ブラウザで通知がブロックされています。端末の設定から許可してください。");
+    }
+  };
+
+  const testNotify = async () => {
+    const p = await ensurePermission();
+    if (p !== "granted") {
+      setNotifyMsg(p === "unsupported" ? "この端末・ブラウザでは通知を使えません。" : "通知が許可されていません。ブラウザや端末の設定から許可してください。");
+      return;
+    }
+    const ok = await showNotification("きょうせいタイム", "これは ためしの通知です。", "test", { sound });
+    setNotifyMsg(ok ? "通知を送りました。届いたか確認してください。" : "通知を表示できませんでした。");
+  };
+
+  const badgeSupported = typeof navigator !== "undefined" && "setAppBadge" in navigator;
+
   const save = async () => {
     try {
-      await saveSettings({ dailyTargetMinutes: minutes, notificationsEnabled: notify, rewardStampEnabled: stamp });
+      await saveSettings({
+        dailyTargetMinutes: minutes,
+        notificationsEnabled: notify,
+        rewardStampEnabled: stamp,
+        reminderEnabled: reminder,
+        reminderTime,
+        notificationSound: sound,
+        badgeEnabled: badge,
+      });
       if (child && (name.trim() !== child.name || icon !== child.icon)) await saveChild({ name: name.trim(), icon });
       setSaved("保存しました");
     } catch {
@@ -113,6 +152,10 @@ export function SettingsPage() {
     !!settings &&
     (minutes !== settings.dailyTargetMinutes ||
       notify !== settings.notificationsEnabled ||
+      reminder !== withSettingDefaults(settings).reminderEnabled ||
+      reminderTime !== withSettingDefaults(settings).reminderTime ||
+      sound !== withSettingDefaults(settings).notificationSound ||
+      badge !== withSettingDefaults(settings).badgeEnabled ||
       stamp !== settings.rewardStampEnabled ||
       (!!child && (name.trim() !== child.name || icon !== child.icon)));
 
@@ -132,14 +175,14 @@ export function SettingsPage() {
             <h3 id="goal-title">1日の装着目標</h3>
           </div>
           <div className="stepper" role="group" aria-label="目標時間">
-            <button type="button" className="step-btn" onClick={() => step(-1)} disabled={minutes <= 60} aria-label="目標時間を1時間減らす">
+            <button type="button" className="step-btn" onClick={() => step(-1)} disabled={minutes <= 60} aria-label="目標時間を30分減らす">
               −
             </button>
             <output className="step-val" aria-live="polite">
               <span className="num">{hours}</span>
-              <span className="unit">時間{rest ? ` ${rest}分` : ""}</span>
+              <span className="unit">時間{rest ? <strong className="unit-min"> {rest}分</strong> : ""}</span>
             </output>
-            <button type="button" className="step-btn" onClick={() => step(1)} disabled={minutes >= 24 * 60} aria-label="目標時間を1時間増やす">
+            <button type="button" className="step-btn" onClick={() => step(1)} disabled={minutes >= 24 * 60} aria-label="目標時間を30分増やす">
               ＋
             </button>
           </div>
@@ -147,14 +190,48 @@ export function SettingsPage() {
           <p className="hint center small">装着時間は歯科医院から指示された時間を設定してください。</p>
         </section>
 
-        <section className="card row-card" aria-label="通知">
-          <span className="bubble sky" aria-hidden="true">🔔</span>
-          <div className="row-text">
-            <h3>通知</h3>
-            <p>終了時間になったらお知らせ</p>
+        <section className="card notify-card" aria-labelledby="notify-title">
+          <div className="card-head">
+            <span className="bubble sky" aria-hidden="true">🔔</span>
+            <h3 id="notify-title">通知の設定</h3>
           </div>
-          <Switch checked={notify} onChange={(v) => void toggleNotify(v)} label="通知" />
-          {(notifyMsg || (notify && perm === "default")) && <p className="hint full">{notifyMsg ?? "オンにすると、ブラウザの通知許可を求めます。"}</p>}
+          <div className="setting-row">
+            <div className="row-text">
+              <h4>目標達成の通知</h4>
+              <p>終了予定の時刻になったらお知らせ</p>
+            </div>
+            <Switch checked={notify} onChange={(v) => void toggleNotify(v)} label="目標達成の通知" />
+          </div>
+          <div className="setting-row">
+            <div className="row-text">
+              <h4>リマインダー</h4>
+              <p>毎日この時刻に、まだ目標に届いていなければお知らせ</p>
+            </div>
+            <Switch checked={reminder} onChange={(v) => void toggleReminder(v)} label="リマインダー" />
+            <label className="time-field">
+              <span>時刻</span>
+              <input type="time" value={reminderTime} disabled={!reminder} onChange={(e) => setReminderTime(e.target.value)} aria-label="リマインダーの時刻" />
+            </label>
+          </div>
+          <div className="setting-row">
+            <div className="row-text">
+              <h4>通知音</h4>
+              <p>{sound ? "端末の通知音を鳴らします" : "音を鳴らさずにお知らせします"}</p>
+            </div>
+            <Switch checked={sound} onChange={setSound} label="通知音" />
+          </div>
+          <div className="setting-row">
+            <div className="row-text">
+              <h4>アイコンのしるし</h4>
+              <p>未達成のあいだ、ホーム画面のアイコンにしるしを表示{badgeSupported ? "" : "（この端末では使えません）"}</p>
+            </div>
+            <Switch checked={badge} onChange={setBadge} label="アイコンのしるし" />
+          </div>
+          <button type="button" className="btn outline wide" onClick={() => void testNotify()}>
+            ためしに通知する
+          </button>
+          {(notifyMsg || ((notify || reminder) && perm === "default")) && <p className="hint">{notifyMsg ?? "オンにすると、ブラウザの通知許可を求めます。"}</p>}
+          <p className="hint small">アプリを閉じている間の通知は、ログインしてクラウド通知を使うと届きます（対応端末のみ）。</p>
         </section>
 
         <section className="card row-card" aria-label="ごほうびスタンプ">

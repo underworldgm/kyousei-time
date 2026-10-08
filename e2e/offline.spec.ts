@@ -26,7 +26,7 @@ test("Service Worker 有効化後はオフラインで起動・記録・設定�
   await page.getByRole("link", { name: "カレンダー" }).click();
   await expect(page.locator(".cal-grid")).toBeVisible();
   await page.getByRole("link", { name: "設定" }).click();
-  await page.getByRole("button", { name: "目標時間を1時間減らす" }).click();
+  for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "目標時間を30分減らす" }).click();
   await page.getByRole("button", { name: "保存する" }).click();
   await expect(page.getByText("保存しました")).toBeVisible();
 

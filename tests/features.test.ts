@@ -96,3 +96,18 @@ describe("押しまちがい", () => {
     expect(await listSessions()).toHaveLength(1);
   });
 });
+
+describe("通知の設定", () => {
+  it("古いデータには既定値を補い、不正な時刻は保存しない", async () => {
+    const { withSettingDefaults } = await import("../src/db/repo");
+    const st = await getSettings();
+    const { reminderEnabled, reminderTime, notificationSound, badgeEnabled, ...old } = withSettingDefaults(st);
+    void reminderEnabled; void reminderTime; void notificationSound; void badgeEnabled;
+    expect(withSettingDefaults(old as never)).toMatchObject({ reminderEnabled: false, reminderTime: "20:00", notificationSound: true, badgeEnabled: true });
+    expect((await saveSettings({ reminderEnabled: true, reminderTime: "07:30" })).reminderTime).toBe("07:30");
+    expect((await saveSettings({ reminderTime: "25:99" })).reminderTime).toBe("07:30");
+  });
+  it("目標は30分単位で保存できる", async () => {
+    expect((await saveSettings({ dailyTargetMinutes: 870 })).dailyTargetMinutes).toBe(870);
+  });
+});

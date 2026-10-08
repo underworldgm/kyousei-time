@@ -24,6 +24,18 @@ import {
 const EPOCH = new Date(0).toISOString();
 export const DEFAULT_TARGET_MINUTES = 14 * 60;
 
+/** 通知まわりの既定値 (古いデータには項目が無いので読み出し時にも補う) */
+export const NOTIFICATION_DEFAULTS = {
+  reminderEnabled: false,
+  reminderTime: "20:00",
+  notificationSound: true,
+  badgeEnabled: true,
+} as const;
+
+export function withSettingDefaults(s: Settings): Required<Settings> {
+  return { ...NOTIFICATION_DEFAULTS, targetHistory: [], ...s } as Required<Settings>;
+}
+
 type Listener = () => void;
 const writeListeners = new Set<Listener>();
 /** 書き込みがあったときに同期を促すためのフック (sync.ts が購読) */
@@ -82,6 +94,7 @@ export async function ensureBootstrap(): Promise<Identity> {
         dailyTargetMinutes: DEFAULT_TARGET_MINUTES,
         notificationsEnabled: true,
         rewardStampEnabled: true,
+        ...NOTIFICATION_DEFAULTS,
         createdAt: EPOCH,
         updatedAt: EPOCH,
         syncStatus: "synced",
@@ -343,15 +356,18 @@ export async function importIntervals(list: { start: number; end: number }[], no
 // ---------------------------------------------------------------- settings / child
 
 export async function saveSettings(
-  patch: Partial<Pick<Settings, "dailyTargetMinutes" | "notificationsEnabled" | "rewardStampEnabled">>,
+  patch: Partial<
+    Pick<Settings, "dailyTargetMinutes" | "notificationsEnabled" | "rewardStampEnabled" | "reminderEnabled" | "reminderTime" | "notificationSound" | "badgeEnabled">
+  >,
   now = Date.now(),
 ): Promise<Settings> {
   const id = await getIdentity();
   const cur = await getSettings(id);
   // 1〜24時間。内部は分単位なので30分刻みへの拡張も可能
   const minutes = Math.min(24 * 60, Math.max(60, Math.round(patch.dailyTargetMinutes ?? cur.dailyTargetMinutes)));
+  if (patch.reminderTime !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(patch.reminderTime)) delete patch.reminderTime;
   const next: Settings = {
-    ...cur,
+    ...withSettingDefaults(cur),
     ...patch,
     dailyTargetMinutes: minutes,
     targetHistory: withTargetChange(cur.targetHistory, cur.dailyTargetMinutes, minutes, dayKeyOf(now)),

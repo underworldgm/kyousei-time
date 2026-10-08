@@ -20,9 +20,10 @@ export async function ensurePermission(): Promise<NotificationPermission | "unsu
 }
 
 /** ServiceWorker 経由 (PWA / Android で確実) → だめなら通常の Notification */
-export async function showNotification(title: string, body: string, tag: string): Promise<boolean> {
+export async function showNotification(title: string, body: string, tag: string, opts: { sound?: boolean } = {}): Promise<boolean> {
   if (!notificationsSupported() || Notification.permission !== "granted") return false;
-  const options: NotificationOptions = { body, tag, icon: "/icons/icon-192.png", badge: "/icons/icon-192.png", lang: "ja" };
+  // Web では通知音の種類は選べないため、「音あり (端末の通知音) / 音なし (silent)」を切り替える
+  const options: NotificationOptions = { body, tag, icon: "/icons/icon-192.png", badge: "/icons/icon-192.png", lang: "ja", silent: opts.sound === false };
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
     if (reg) {
@@ -40,9 +41,18 @@ export async function showNotification(title: string, body: string, tag: string)
   }
 }
 
-export const notifyGoalReached = () => showNotification("きょうせいタイム", "目標の装着時間になりました！\nよくがんばりました！", "goal-reached");
+export const GOAL_TEXT = { title: "きょうせいタイム", body: "目標の装着時間になりました！\nよくがんばりました！" };
 
-/** 将来の Badge API 対応用 (未達成のとき 1 を表示するなど)。現在は呼び出し元なし。 */
+export const notifyGoalReached = (sound = true) => showNotification(GOAL_TEXT.title, GOAL_TEXT.body, "goal-reached", { sound });
+
+export const reminderText = (remaining: string) => ({ title: "きょうせいタイム", body: `今日の装着はあと${remaining}だよ。\nいっしょにがんばろう！` });
+
+export const notifyReminder = (remaining: string, sound = true) => {
+  const t = reminderText(remaining);
+  return showNotification(t.title, t.body, "daily-reminder", { sound });
+};
+
+/** Badge API: ホーム画面に追加したアプリのアイコンにしるしを付ける (対応環境のみ。非対応なら何もしない) */
 export function setAppBadge(count: number): void {
   const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
   try {

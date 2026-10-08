@@ -21,7 +21,7 @@ test("2台の端末: ログイン → 記録 → もう1台に同期 → 削除�
   await expect(pa.locator(".sync-badge")).toContainText("この端末に保存");
   await pa.getByRole("link", { name: "設定" }).click();
   await pa.getByLabel("名前（ニックネーム）").fill("みな");
-  await pa.getByRole("button", { name: "目標時間を1時間減らす" }).click();
+  for (let i = 0; i < 2; i++) await pa.getByRole("button", { name: "目標時間を30分減らす" }).click();
   await pa.getByRole("button", { name: "保存する" }).click();
   await expect(pa.getByText("保存しました")).toBeVisible();
   await pa.getByRole("link", { name: "時間" }).click();

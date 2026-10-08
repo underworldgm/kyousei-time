@@ -6,7 +6,7 @@ import { NavBar } from "../components/NavBar";
 import { CalendarPage } from "../pages/CalendarPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { TimerPage } from "../pages/TimerPage";
-import { useGoalNotifier } from "../hooks/useGoalNotifier";
+import { useAppBadge, useGoalNotifier, useReminder } from "../hooks/useGoalNotifier";
 import { AuthProvider } from "../hooks/useAuth";
 
 /** タブを切り替えたら先頭から表示する (上部の歯のキャラクターを隠さない) */
@@ -21,6 +21,8 @@ function ScrollToTop() {
 function Shell() {
   const data = useAppData();
   useGoalNotifier(data);
+  useReminder(data);
+  useAppBadge(data);
   if (data.error) {
     return (
       <div className="fatal" role="alert">

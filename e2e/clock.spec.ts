@@ -28,7 +28,7 @@ test("仮想時計: 装着中に目標達成 → 通知は1回 → 日付をま�
   await openApp(page, "/settings");
 
   // 目標を1時間に
-  for (let i = 0; i < 13; i++) await page.getByRole("button", { name: "目標時間を1時間減らす" }).click();
+  for (let i = 0; i < 26; i++) await page.getByRole("button", { name: "目標時間を30分減らす" }).click();
   await page.getByRole("button", { name: "保存する" }).click();
   await expect(page.getByText("保存しました")).toBeVisible();
 
