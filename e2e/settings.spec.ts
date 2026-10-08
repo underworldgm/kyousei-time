@@ -64,3 +64,29 @@ test("ためしに通知できる", async ({ page }) => {
   await expect(page.getByText("通知を送りました")).toBeVisible();
   expect((await notes(page))[0].body).toContain("ためしの通知");
 });
+
+test("子どもを追加して切り替えると、記録はそれぞれ別になる", async ({ page }) => {
+  await openApp(page, "/settings");
+  await page.getByLabel("名前（ニックネーム）").fill("みな");
+  await page.getByRole("button", { name: "保存する" }).click();
+  await page.getByRole("link", { name: "時間" }).click();
+  await page.getByRole("button", { name: "装着開始" }).click();
+  await expect(page.getByText("現在：装着中")).toBeVisible();
+
+  await page.getByRole("link", { name: "設定" }).click();
+  await page.getByRole("button", { name: "＋ 子どもを追加する" }).click();
+  await page.getByLabel("追加する子の名前").fill("そうた");
+  await page.getByRole("radio", { name: "追加する子のアイコン 🐻" }).click();
+  await page.getByRole("button", { name: "追加する", exact: true }).click();
+  await expect(page.locator(".hero-sub")).toContainText("そうたの");
+
+  await page.getByRole("link", { name: "時間" }).click();
+  await expect(page.getByText("現在：外しています")).toBeVisible(); // そうたは別の記録
+
+  // ヘッダーで みな に戻す
+  await page.getByLabel("表示する子どもを切り替える").selectOption({ label: "🦷 みな" });
+  await expect(page.locator(".hero-sub")).toContainText("みなの");
+  await expect(page.getByText("現在：装着中")).toBeVisible();
+  await page.reload();
+  await expect(page.locator(".hero-sub")).toContainText("みなの"); // 選択は端末に保存
+});

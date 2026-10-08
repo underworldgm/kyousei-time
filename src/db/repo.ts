@@ -86,7 +86,7 @@ export async function ensureBootstrap(): Promise<Identity> {
       await db.children.put({ id: childId, userId, name: "", icon: "🦷", createdAt: EPOCH, updatedAt: EPOCH, syncStatus: "synced" });
     }
     const settingsId = cloudIds ? childId : `settings-${childId}`;
-    if (!(await db.settings.get(settingsId))) {
+    if (!(await db.settings.where("childId").equals(childId).first())) {
       await db.settings.put({
         id: settingsId,
         userId,
@@ -139,26 +139,26 @@ async function adoptAuthUserInner(uid: string): Promise<AdoptResult> {
       await db.meta.clear();
       if (keep) await db.meta.put(keep);
     }
-    const oldChild = cur.childId;
-    const newChild = uid;
+    // 子どもIDの付け替え: 最初の子ども (default-child) はユーザーIDと同じIDに。追加した子どもは UUID のまま
+    const mapChild = (id: string) => (id === DEFAULT_CHILD_ID ? uid : id);
+    const newChild = foreign ? uid : mapChild(cur.childId);
     if (!foreign) {
-      // 既存ローカルデータの付け替え
-      const sessions = await db.sessions.where("childId").equals(oldChild).toArray();
-      for (const s of sessions) {
-        await db.sessions.put({ ...s, userId: uid, childId: newChild, syncStatus: "pending" });
+      // 既存ローカルデータの付け替え (すべての子ども)
+      for (const s of await db.sessions.toArray()) {
+        await db.sessions.put({ ...s, userId: uid, childId: mapChild(s.childId), syncStatus: "pending" });
         await enqueue("sessions", s.id);
       }
-      const child = await db.children.get(oldChild);
-      if (child) {
-        await db.children.delete(oldChild);
-        await db.children.put({ ...child, id: newChild, userId: uid, syncStatus: "pending" });
-        await enqueue("children", newChild);
+      for (const child of await db.children.toArray()) {
+        const id = mapChild(child.id);
+        if (id !== child.id) await db.children.delete(child.id);
+        await db.children.put({ ...child, id, userId: uid, syncStatus: "pending" });
+        await enqueue("children", id);
       }
-      const st = await db.settings.where("childId").equals(oldChild).first();
-      if (st) {
+      for (const st of await db.settings.toArray()) {
+        const childId = mapChild(st.childId);
         await db.settings.delete(st.id);
-        await db.settings.put({ ...st, id: newChild, userId: uid, childId: newChild, syncStatus: "pending" });
-        await enqueue("settings", newChild);
+        await db.settings.put({ ...st, id: childId, userId: uid, childId, syncStatus: "pending" });
+        await enqueue("settings", childId);
       }
       const pr = await db.profiles.toCollection().first();
       if (pr) {
@@ -351,6 +351,51 @@ export async function importIntervals(list: { start: number; end: number }[], no
   });
   if (result.added) emitWrite();
   return result;
+}
+
+// ---------------------------------------------------------------- children (複数の子ども)
+
+export async function listChildren(): Promise<Child[]> {
+  const id = await getIdentity();
+  return (await db.children.toArray()).filter((c) => c.userId === id.userId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/** 子どもを追加して、その子に切り替える */
+export async function addChild(name: string, icon: string, now = Date.now()): Promise<Child> {
+  const id = await getIdentity();
+  const ts = nowIso(now);
+  const child: Child = { id: uuid(), userId: id.userId, name: name.trim(), icon, createdAt: ts, updatedAt: ts, syncStatus: "pending" };
+  const cloudIds = id.userId !== LOCAL_USER_ID;
+  const settings: Settings = {
+    id: cloudIds ? child.id : `settings-${child.id}`,
+    userId: id.userId,
+    childId: child.id,
+    dailyTargetMinutes: DEFAULT_TARGET_MINUTES,
+    notificationsEnabled: true,
+    rewardStampEnabled: true,
+    ...NOTIFICATION_DEFAULTS,
+    createdAt: ts,
+    updatedAt: ts,
+    syncStatus: "pending",
+  };
+  await db.transaction("rw", [db.children, db.settings, db.outbox, db.meta], async () => {
+    await writeRecord("children", child);
+    await writeRecord("settings", settings);
+    await setMeta("identity", { ...id, childId: child.id } satisfies Identity);
+  });
+  emitWrite();
+  return child;
+}
+
+/** 表示する子どもを切り替える (端末ごとの選択。データはそれぞれ別に保存される) */
+export async function switchChild(childId: string): Promise<void> {
+  const id = await getIdentity();
+  if (id.childId === childId) return;
+  const child = await db.children.get(childId);
+  if (!child) return;
+  await setMeta("identity", { ...id, childId } satisfies Identity);
+  await ensureBootstrap();
+  emitWrite();
 }
 
 // ---------------------------------------------------------------- settings / child

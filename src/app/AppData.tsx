@@ -9,6 +9,8 @@ import { dayKeyOf, intervalsOf, targetForDay, type Interval } from "../lib/time"
 interface Snapshot {
   identity: Identity;
   child: Child | null;
+  /** この保護者の子ども全員 (切り替え用) */
+  children: Child[];
   settings: Settings | null;
   sessions: WearSession[];
 }
@@ -26,16 +28,23 @@ export interface AppData extends Snapshot {
   targetFor: (dayKey: string) => number;
 }
 
-const EMPTY: Snapshot = { identity: { userId: "local-user", childId: "default-child", authenticated: false }, child: null, settings: null, sessions: [] };
+const EMPTY: Snapshot = { identity: { userId: "local-user", childId: "default-child", authenticated: false }, child: null, children: [], settings: null, sessions: [] };
 
 async function loadSnapshot(): Promise<Snapshot> {
   const identity = await getIdentity();
-  const [child, settings, all] = await Promise.all([
+  const [child, settings, all, children] = await Promise.all([
     db.children.get(identity.childId),
     db.settings.where("childId").equals(identity.childId).first(),
     db.sessions.where("childId").equals(identity.childId).toArray(),
+    db.children.toArray(),
   ]);
-  return { identity, child: child ?? null, settings: settings ?? null, sessions: all.filter((s) => !s.deletedAt) };
+  return {
+    identity,
+    child: child ?? null,
+    children: children.filter((c) => c.userId === identity.userId).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    settings: settings ?? null,
+    sessions: all.filter((s) => !s.deletedAt),
+  };
 }
 
 const Ctx = createContext<AppData | null>(null);

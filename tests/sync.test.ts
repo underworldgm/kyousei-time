@@ -271,3 +271,44 @@ describe("複数端末", () => {
 });
 
 void T0;
+
+describe("複数の子ども", () => {
+  it("子どもごとに記録と目標が分かれ、切り替えられる", async () => {
+    const { addChild, switchChild, listChildren, getSettings } = await import("../src/db/repo");
+    await addSession(at("08:00"), at("09:00"), at("10:00")); // 1人目
+    const first = (await getIdentity()).childId;
+    const sota = await addChild("そうた", "🐻");
+    expect((await getIdentity()).childId).toBe(sota.id);
+    expect(await listSessions()).toHaveLength(0);
+    await saveSettings({ dailyTargetMinutes: 600 });
+    await addSession(at("10:00"), at("12:00"), at("13:00"));
+    expect(await listSessions()).toHaveLength(1);
+    await switchChild(first);
+    expect(await listSessions()).toHaveLength(1);
+    expect((await getSettings()).dailyTargetMinutes).toBe(840);
+    expect((await listChildren()).map((c) => c.name)).toEqual(["", "そうた"]);
+  });
+
+  it("ログイン時に全員分の記録がアカウントへ引き継がれ、別端末にも届く", async () => {
+    const { addChild, switchChild, listChildren } = await import("../src/db/repo");
+    await addSession(at("08:00"), at("09:00"), at("10:00"));
+    const sota = await addChild("そうた", "🐻");
+    await addSession(at("10:00"), at("12:00"), at("13:00"));
+    await adoptAuthUser(UID);
+    expect((await getIdentity()).childId).toBe(sota.id); // 選んでいた子のまま
+    const server = new FakeServer();
+    await syncOnce(server, UID);
+    expect(server.tables.children.size).toBe(2);
+    expect(server.tables.settings.size).toBe(2);
+    expect([...server.tables.sessions.values()].map((r) => r.child_id).sort()).toEqual([UID, sota.id].sort());
+
+    await reset(); // 別の端末
+    await adoptAuthUser(UID);
+    await syncOnce(server, UID);
+    expect((await listChildren()).map((c) => c.name).sort()).toEqual(["", "そうた"].sort());
+    expect(await listSessions()).toHaveLength(1); // 1人目 (uid) の記録
+    await switchChild(sota.id);
+    expect(await listSessions()).toHaveLength(1);
+    expect(await db.settings.count()).toBe(2);
+  });
+});

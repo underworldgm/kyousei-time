@@ -15,7 +15,7 @@ export function useGoalNotifier(d: AppData) {
   const reached = loaded && summarizeDay(intervals, todayKey, targetMinutes).achieved;
   useEffect(() => {
     if (!reached || !active || !settings?.notificationsEnabled) return;
-    const key = `goalNotified:${todayKey}`;
+    const key = `goalNotified:${d.identity.childId}:${todayKey}`;
     let cancelled = false;
     void (async () => {
       try {
@@ -33,7 +33,7 @@ export function useGoalNotifier(d: AppData) {
     return () => {
       cancelled = true;
     };
-  }, [reached, active?.id, settings?.notificationsEnabled, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [reached, active?.id, settings?.notificationsEnabled, todayKey, d.identity.childId]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /** 1日1回だけ実行するための印 (確認と記録を1トランザクションで) */
@@ -58,12 +58,12 @@ export function useReminder(d: AppData) {
     if (!due || !st) return;
     void (async () => {
       try {
-        if (await onceToday(`reminder:${todayKey}`)) await notifyReminder(fmtDuration(sum.remainingMinutes), st.notificationSound);
+        if (await onceToday(`reminder:${d.identity.childId}:${todayKey}`)) await notifyReminder(fmtDuration(sum.remainingMinutes), st.notificationSound);
       } catch {
         /* 通知できなくてもアプリは続行 */
       }
     })();
-  }, [due, todayKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [due, todayKey, d.identity.childId]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /** 未達成のあいだ、アプリのアイコンにしるし (Badge API) を付ける */

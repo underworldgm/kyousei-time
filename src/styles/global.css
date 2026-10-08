@@ -137,6 +137,61 @@ ul {
   font-size: 15px;
   vertical-align: middle;
 }
+.child-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  margin-left: 6px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1.5px solid var(--sky);
+  color: #1d5f8f;
+  font-size: 11px;
+  font-weight: 800;
+}
+.child-switch select {
+  position: absolute;
+  inset: -6px;
+  opacity: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+.child-switch:focus-within {
+  outline: 3px solid #1c7fd6;
+  outline-offset: 2px;
+}
+.child-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.child-chips button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: #fff;
+  font-weight: 800;
+}
+.child-chips button.on {
+  border-color: var(--mint-dark);
+  background: var(--mint-soft);
+  color: #0d6b5b;
+}
+.add-child,
+.add-child-btn {
+  margin-top: 10px;
+}
+.add-child {
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+.add-child .btn-row {
+  margin-top: 8px;
+}
 .hero-sub {
   display: flex;
   align-items: center;

@@ -5,7 +5,7 @@ import { RewardStamp, STAMP_KINDS, STAMP_NAMES } from "../components/RewardStamp
 import { useAuth } from "../hooks/useAuth";
 import { useInstall } from "../hooks/useInstall";
 import { useSyncState } from "../hooks/useSyncState";
-import { clearSampleData, importIntervals, saveChild, saveSettings, seedSampleData, withSettingDefaults } from "../db/repo";
+import { addChild, clearSampleData, importIntervals, saveChild, saveSettings, seedSampleData, switchChild, withSettingDefaults } from "../db/repo";
 import { parseSessionsCsv } from "../lib/csv";
 import { cloudConfigured } from "../lib/supabase";
 import { ensurePermission, permissionState, showNotification } from "../lib/notifications";
@@ -29,7 +29,10 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 }
 
 export function SettingsPage() {
-  const { settings, child, sessions, now, targetMinutes, targetFor, identity } = useAppData();
+  const { settings, child, children, sessions, now, targetMinutes, targetFor, identity } = useAppData();
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newIcon, setNewIcon] = useState("🐻");
   const [minutes, setMinutes] = useState(settings?.dailyTargetMinutes ?? targetMinutes);
   const [notify, setNotify] = useState(true);
   const [stamp, setStamp] = useState(true);
@@ -256,6 +259,15 @@ export function SettingsPage() {
             <span className="bubble yellow" aria-hidden="true">🧒</span>
             <h3 id="child-title">お子さま</h3>
           </div>
+          {children.length > 1 && (
+            <div className="child-chips" role="radiogroup" aria-label="表示する子ども">
+              {children.map((c) => (
+                <button key={c.id} type="button" role="radio" aria-checked={c.id === identity.childId} className={c.id === identity.childId ? "on" : ""} onClick={() => void switchChild(c.id)}>
+                  <span aria-hidden="true">{c.icon}</span> {c.name || "なまえ未設定"}
+                </button>
+              ))}
+            </div>
+          )}
           <label className="field">
             <span>名前（ニックネーム）</span>
             <input type="text" value={name} maxLength={12} placeholder="例: みなちゃん" onChange={(e) => setName(e.target.value)} />
@@ -267,6 +279,46 @@ export function SettingsPage() {
               </button>
             ))}
           </div>
+          {adding ? (
+            <form
+              className="add-child"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newName.trim()) return;
+                void addChild(newName, newIcon).then(() => {
+                  setAdding(false);
+                  setNewName("");
+                  setSaved(`${newName.trim()}を追加しました`);
+                  setTimeout(() => setSaved(null), 2500);
+                });
+              }}
+            >
+              <label className="field">
+                <span>追加する子の名前</span>
+                <input type="text" value={newName} maxLength={12} required placeholder="例: そうたくん" onChange={(e) => setNewName(e.target.value)} autoFocus />
+              </label>
+              <div className="icon-pick" role="radiogroup" aria-label="追加する子のアイコン">
+                {ICONS.map((ic) => (
+                  <button key={ic} type="button" role="radio" aria-checked={newIcon === ic} className={newIcon === ic ? "on" : ""} onClick={() => setNewIcon(ic)} aria-label={`追加する子のアイコン ${ic}`}>
+                    {ic}
+                  </button>
+                ))}
+              </div>
+              <div className="btn-row">
+                <button type="button" className="btn outline" onClick={() => setAdding(false)}>
+                  やめる
+                </button>
+                <button type="submit" className="btn mint">
+                  追加する
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button type="button" className="btn outline wide add-child-btn" onClick={() => setAdding(true)}>
+              ＋ 子どもを追加する
+            </button>
+          )}
+          <p className="hint small">記録・目標・スタンプは子どもごとに別々に保存されます。</p>
         </section>
 
         <button type="button" className="btn-main mint save" onClick={() => void save()}>

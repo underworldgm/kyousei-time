@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Mascot } from "./Mascot";
 import { Cloud, Rainbow, Sparkle } from "./Sky";
 import { SyncBadge } from "./SyncBadge";
+import { ChildSwitcher } from "./ChildSwitcher";
 
 interface Props {
   childName: string;
@@ -29,14 +30,15 @@ export function Hero({ childName, childIcon, mood = "happy", crown = false, chil
       </div>
       <div className="hero-left">
         <SyncBadge />
-        <p className="hero-sub">
+        <div className="hero-sub">
           {childName && childIcon && (
             <span className="hero-avatar" aria-hidden="true">
               {childIcon}
             </span>
           )}
           {childName ? `${childName}の` : "みんなの"}
-        </p>
+          <ChildSwitcher />
+        </div>
         <h1 className="logo" aria-label="きょうせいタイム">
           {LETTERS.map((c, i) => (
             <span key={i} style={{ color: COLORS[i] }} aria-hidden="true">
