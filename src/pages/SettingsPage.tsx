@@ -192,7 +192,7 @@ export function SettingsPage() {
           </div>
         </section>
 
-        <button type="button" className="btn-main start save" onClick={() => void save()}>
+        <button type="button" className="btn-main mint save" onClick={() => void save()}>
           <span className="btn-glyph" aria-hidden="true">✓</span> 保存する
         </button>
         <p className={`saved${!saved && dirty ? " dirty" : ""}`} role="status">
