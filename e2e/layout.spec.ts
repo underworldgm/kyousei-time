@@ -6,6 +6,7 @@ const PAGES = [
   { path: "/", name: "時間" },
   { path: "/calendar", name: "カレンダー" },
   { path: "/settings", name: "設定" },
+  { path: "/stats", name: "グラフ" },
 ];
 
 for (const p of PAGES) {

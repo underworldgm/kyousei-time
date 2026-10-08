@@ -4,6 +4,7 @@ import { PreviewBanner } from "../components/PreviewBanner";
 import { AppDataProvider, useAppData } from "./AppData";
 import { NavBar } from "../components/NavBar";
 import { CalendarPage } from "../pages/CalendarPage";
+import { StatsPage } from "../pages/StatsPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { TimerPage } from "../pages/TimerPage";
 import { useAppBadge, useGoalNotifier, useReminder } from "../hooks/useGoalNotifier";
@@ -44,6 +45,7 @@ function Shell() {
           <Route path="/" element={<TimerPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/stats" element={<StatsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

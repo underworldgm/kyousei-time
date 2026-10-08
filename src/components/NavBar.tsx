@@ -19,10 +19,19 @@ const icons = {
   ),
 };
 
+const chartIcon = (
+  <>
+    <rect x="4" y="12" width="4" height="8" rx="1.5" />
+    <rect x="10" y="7" width="4" height="13" rx="1.5" />
+    <rect x="16" y="3.5" width="4" height="16.5" rx="1.5" />
+  </>
+);
+
 const items = [
   { to: "/settings", label: "設定", icon: icons.settings },
   { to: "/", label: "時間", icon: icons.timer },
   { to: "/calendar", label: "カレンダー", icon: icons.calendar },
+  { to: "/stats", label: "グラフ", icon: chartIcon },
 ] as const;
 
 export function NavBar() {

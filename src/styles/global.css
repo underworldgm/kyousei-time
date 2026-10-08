@@ -463,8 +463,9 @@ ul {
   width: 100%;
   max-width: var(--app-w);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
   background: rgba(255, 255, 255, 0.96);
   -webkit-backdrop-filter: blur(10px); /* Safari 17 以前 */
   backdrop-filter: blur(10px);
@@ -995,6 +996,194 @@ ul {
 .praise.soft {
   background: var(--sky-soft);
   color: #1b6a9c;
+}
+
+/* ---------------------------------------------------------------- stats */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.seg button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.seg button.on {
+  background: var(--sky);
+  color: #0b3556;
+}
+.chart-card {
+  padding: 12px 12px 8px;
+}
+.chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+.chart-head h2 {
+  font-size: 16px;
+  font-weight: 800;
+}
+.chart-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chart-legend .sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.chart-detail {
+  min-height: 22px;
+  margin: 4px 0 2px;
+  font-size: 13px;
+  color: var(--navy);
+}
+.chart-detail .muted {
+  color: var(--text-muted);
+}
+.bar-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.bar-chart .grid {
+  stroke: #e3eef3;
+  stroke-width: 1;
+}
+.bar-chart .axis {
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.bar-chart .target-line {
+  stroke: #c63d30;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.bar-chart .target-label {
+  font-size: 10px;
+  font-weight: 800;
+  fill: #b03428;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.bar-chart .hit {
+  cursor: pointer;
+  outline: none;
+}
+.bar-chart .hit:focus-visible {
+  stroke: #1c7fd6;
+  stroke-width: 2;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mini-val.small {
+  font-size: 20px;
+}
+.rate-bar {
+  height: 8px;
+  margin: 4px 0 2px;
+  border-radius: 999px;
+  background: #e7f2ee;
+  overflow: hidden;
+}
+.rate-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #16907b;
+}
+.recent-card h2 {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.recent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.recent-table thead th {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: left;
+  padding-bottom: 4px;
+}
+.recent-table tbody th,
+.recent-table td {
+  padding: 6px 0;
+  border-top: 1px dashed var(--line);
+  text-align: left;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.recent-table small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.recent-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.recent-table .ok-mark {
+  color: #16907b;
+}
+.mini-bar-cell {
+  width: 40%;
+  padding: 0 10px !important;
+}
+.mini-bar {
+  position: relative;
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  background: #eef4f7;
+}
+.mini-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+.mini-bar i {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: #c63d30;
 }
 
 /* ---------------------------------------------------------------- settings */

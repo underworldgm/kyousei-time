@@ -192,3 +192,22 @@ describe("性能", () => {
     expect((performance.now() - t0) / 20).toBeLessThan(15); // 1回あたり 15ms 未満
   });
 });
+
+describe("グラフ用の集計", () => {
+  it("日別・週別・最長最短・達成率", async () => {
+    const { dailySeries, weeklySeries, summarize } = await import("../src/lib/stats");
+    const sessions = [S("2026-10-05", "07:00", "22:00"), S("2026-10-06", "08:00", "20:00"), S("2026-10-07", "07:00", "21:30")];
+    const iv = intervalsOf(sessions, fromJst("2026-10-07", "23:00"));
+    const d = dailySeries(iv, "2026-10-07", 7, 840);
+    expect(d.map((p) => p.minutes)).toEqual([0, 0, 0, 0, 900, 720, 870]);
+    expect(d.at(-1)!.dayKey).toBe("2026-10-07");
+    const s = summarize(d);
+    expect(s).toMatchObject({ days: 7, recordedDays: 3, achievedDays: 2, ratePercent: 29, averageMinutes: Math.round(2490 / 7) });
+    expect(s.longest!.dayKey).toBe("2026-10-05");
+    expect(s.shortest!.dayKey).toBe("2026-10-06");
+    // 2026-10-07 は水曜 → 今週は 10/4(日)〜10/7 の4日
+    const w = weeklySeries(iv, "2026-10-07", 2, 840);
+    expect(w.at(-1)).toMatchObject({ startKey: "2026-10-04", endKey: "2026-10-07", days: 4, averageMinutes: Math.round(2490 / 4), achievedDays: 2 });
+    expect(w[0]).toMatchObject({ startKey: "2026-09-27", days: 7, averageMinutes: 0 });
+  });
+});
