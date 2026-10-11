@@ -842,7 +842,7 @@ ul {
   font-weight: 800;
 }
 .cal-day.today .cal-num {
-  background: #6573e8;
+  background: #5563dd;
   color: #fff;
 }
 .cal-day.future .cal-num {
