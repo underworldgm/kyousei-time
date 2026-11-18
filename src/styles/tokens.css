@@ -1,0 +1,31 @@
+:root {
+  --mint: #38c5ad;
+  --mint-dark: #1f9d88;
+  --mint-soft: #ddf8f2;
+
+  --sky: #7fcaf5;
+  --sky-soft: #e7f7ff;
+
+  --coral: #ff8175;
+  --coral-dark: #e0584b;
+  --coral-soft: #ffe5df;
+
+  --yellow: #ffd66b;
+  --yellow-soft: #fff4d1;
+  --pink-soft: #ffe3ec;
+
+  --background: #f7fcfe;
+  --card: #ffffff;
+  --line: #e1f0f4;
+
+  --navy: #14233e;
+  --text-muted: #6b7587; /* 白背景で 4.5:1 以上 */
+
+  --radius-card: 20px;
+  --radius-pill: 999px;
+  --shadow-card: 0 6px 18px rgba(70, 140, 170, 0.12);
+  --nav-h: 64px;
+  --app-w: 430px;
+
+  --font: "M PLUS Rounded 1c", "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "BIZ UDPGothic", "Yu Gothic", "Meiryo", system-ui, -apple-system, "Segoe UI", sans-serif;
+}

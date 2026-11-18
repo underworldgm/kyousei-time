@@ -5,7 +5,9 @@
 子どもの歯科矯正器具の装着時間を記録する、日本語のモバイル向けWebアプリです。
 デザインは明るく親しみやすい雰囲気で、設定・時間・カレンダーの3画面があります。
 
-## 技術構成
+> **更新**: 現在の実装は React + TypeScript + Vite の PWA (`src/`)。詳細は `README.md`。旧版(素のHTML/JS)は `legacy/` にあり、以下の旧仕様記述はその説明です。確認コマンドは `npm run lint && npm test && npm run build`。引き継ぎは `docs/HANDOFF.md`。
+
+## 技術構成(旧版)
 
 - ビルド不要のHTML/CSS/JavaScript
 - エントリーポイント: `index.html`

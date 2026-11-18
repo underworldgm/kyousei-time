@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>きょうせいタイム</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="phone-shell" aria-label="きょうせいタイム">
+      <section class="app">
+        <header class="hero" aria-label="アプリヘッダー">
+          <div class="status-bar">
+            <span>9:41</span>
+            <span class="status-icons">●●● ))) ▭</span>
+          </div>
+          <div class="brand" aria-label="きょうせいタイム">
+            <span>き</span><span>ょ</span><span>う</span><span>せ</span><span>い</span><span>タ</span><span>イ</span><span>ム</span>
+          </div>
+          <div class="sky">
+            <div class="cloud cloud-left"></div>
+            <div class="cloud cloud-right"></div>
+            <div class="sparkle sparkle-a">✦</div>
+            <div class="sparkle sparkle-b">✧</div>
+            <div class="sparkle sparkle-c">✦</div>
+            <div class="rainbow"></div>
+            <div class="tooth-mascot" aria-hidden="true">
+              <div class="brace"></div>
+              <div class="eye left"></div>
+              <div class="eye right"></div>
+              <div class="cheek left"></div>
+              <div class="cheek right"></div>
+              <div class="mouth"></div>
+            </div>
+          </div>
+        </header>
+
+        <section class="content">
+          <section class="screen active" id="settings-screen" aria-labelledby="settings-title">
+            <h1 id="settings-title">設定</h1>
+            <div class="card goal-card">
+              <div class="icon-bubble mint">🎯</div>
+              <div class="card-main">
+                <h2>1日の装着目標</h2>
+                <div class="stepper" aria-label="目標時間">
+                  <button class="step-button" id="decrease-goal" type="button" aria-label="目標時間を減らす">−</button>
+                  <output class="goal-output" id="goal-hours-output">14</output>
+                  <button class="step-button" id="increase-goal" type="button" aria-label="目標時間を増やす">＋</button>
+                  <span class="unit">時間</span>
+                </div>
+                <p>毎日つける目標時間を設定します</p>
+              </div>
+            </div>
+
+            <div class="card row-card">
+              <div class="icon-bubble blue">🔔</div>
+              <div>
+                <h2>通知</h2>
+                <p>終了時間になったらお知らせ</p>
+              </div>
+              <label class="switch" aria-label="通知">
+                <input id="notification-toggle" type="checkbox" checked />
+                <span></span>
+              </label>
+            </div>
+
+            <button class="card row-card stamp-row" type="button" id="stamp-preview-button">
+              <div class="icon-bubble pink">⭐</div>
+              <div>
+                <h2>ごほうびスタンプ</h2>
+                <p>目標達成でカレンダーに○スタンプ</p>
+              </div>
+              <span class="chevron">›</span>
+            </button>
+
+            <button class="primary-button" id="save-settings" type="button">
+              <span>✓</span>保存する
+            </button>
+          </section>
+
+          <section class="screen" id="timer-screen" aria-labelledby="timer-title">
+            <h1 id="timer-title">時間</h1>
+            <div class="target-strip">
+              <span class="mini-icon">🎯</span>
+              <span>今日の目標</span>
+              <strong><span id="today-goal">14</span>時間</strong>
+              <span class="twinkle">✦</span>
+            </div>
+
+            <div class="card progress-card">
+              <div class="progress-ring" aria-label="今日の装着状況">
+                <svg viewBox="0 0 120 120" role="img">
+                  <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+                  <circle class="ring-value" id="ring-value" cx="60" cy="60" r="52"></circle>
+                </svg>
+                <div class="ring-content">
+                  <span class="status-pill" id="timer-status">待機中</span>
+                  <span class="small">のこり</span>
+                  <strong id="remaining-time">14時間00分</strong>
+                  <span class="star-face">☆</span>
+                </div>
+              </div>
+              <p>今日の装着 <strong id="today-worn">0時間00分</strong> / <span id="today-goal-small">14時間</span></p>
+            </div>
+
+            <div class="time-grid">
+              <div class="card time-card">
+                <span class="time-icon green">◷</span>
+                <p>開始時間</p>
+                <strong id="start-time">--:--</strong>
+                <small id="start-caption">開始すると記録します</small>
+              </div>
+              <div class="arrow">➜</div>
+              <div class="card time-card">
+                <span class="time-icon blue-text">◴</span>
+                <p>終了予定</p>
+                <strong id="end-time">--:--</strong>
+                <small>目標時間から計算</small>
+              </div>
+            </div>
+
+            <div class="notice-line">🔔 終了時間になったら通知します</div>
+            <button class="primary-button" id="timer-button" type="button">
+              <span id="timer-button-dot"></span><span id="timer-button-label">装着開始</span>
+            </button>
+          </section>
+
+          <section class="screen" id="calendar-screen" aria-labelledby="calendar-title">
+            <h1 id="calendar-title">カレンダー</h1>
+            <div class="card calendar-card">
+              <div class="month-nav">
+                <button id="prev-month" type="button" aria-label="前の月">‹</button>
+                <h2 id="month-title">2026年6月</h2>
+                <button id="next-month" type="button" aria-label="次の月">›</button>
+              </div>
+              <div class="week-row">
+                <span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span>
+              </div>
+              <div class="calendar-grid" id="calendar-grid"></div>
+              <p class="legend">◎ スタンプ = 目標達成</p>
+            </div>
+
+            <div class="card result-card">
+              <div class="big-star">⭐</div>
+              <div class="result-main">
+                <h2 id="selected-date-title">今日</h2>
+                <dl>
+                  <div><dt>装着時間</dt><dd id="selected-duration">0時間00分</dd></div>
+                  <div><dt>結果</dt><dd id="selected-result">これから</dd></div>
+                </dl>
+                <div class="praise" id="selected-praise">今日も少しずつ進もう！</div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <nav class="bottom-nav" aria-label="画面切り替え">
+          <button class="nav-button active" data-screen="settings-screen" type="button">
+            <span>⚙</span><strong>設定</strong>
+          </button>
+          <button class="nav-button" data-screen="timer-screen" type="button">
+            <span>◷</span><strong>時間</strong>
+          </button>
+          <button class="nav-button" data-screen="calendar-screen" type="button">
+            <span>▦</span><strong>カレンダー</strong>
+          </button>
+        </nav>
+      </section>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
