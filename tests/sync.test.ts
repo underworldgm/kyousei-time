@@ -352,3 +352,58 @@ describe("子どもの削除", () => {
     expect(await listSessions()).toHaveLength(1);
   });
 });
+
+describe("レビュー指摘の修正", () => {
+  it("時計のずれで開始が未来になっていても、終了で記録を消さない", async () => {
+    await startWear(at("10:02")); // 別端末の時計が2分進んでいた
+    const r = await stopWear(at("10:00"));
+    expect(r?.ok && r.discarded).toBe(false);
+    const [s] = await db.sessions.toArray();
+    expect(s.deletedAt).toBeNull();
+    expect(Date.parse(s.endTime!)).toBeGreaterThan(Date.parse(s.startTime));
+  });
+
+  it("送れない記録があっても、他の端末の記録は受け取れる", async () => {
+    await adoptAuthUser(UID);
+    const server = new FakeServer();
+    await addSession(at("08:00"), at("09:00"), at("10:00"));
+    await syncOnce(server, UID);
+    // 他端末の記録がサーバーにある状態で、この端末の設定だけ送信に失敗し続ける
+    const other = { ...[...server.tables.sessions.values()][0], id: "55555555-5555-4555-8555-555555555555", start_time: new Date(at("12:00")).toISOString(), end_time: new Date(at("13:00")).toISOString() };
+    await server.upsert("sessions", [other]);
+    const orig = server.upsert.bind(server);
+    server.upsert = async (t, rows) => {
+      if (t === "settings") throw new Error("column reminder_time does not exist");
+      return orig(t, rows);
+    };
+    await saveSettings({ dailyTargetMinutes: 600 });
+    const r = await syncOnce(server, UID);
+    expect(r.ok).toBe(false);
+    expect(await listSessions()).toHaveLength(2); // pull はできている
+    expect(await db.outbox.count()).toBe(1); // 設定は送信待ちのまま残る
+  });
+
+  it("装着中の子を削除すると、その装着は終わらせてから隠す", async () => {
+    const { addChild, deleteChild, restoreChild } = await import("../src/db/repo");
+    const sota = await addChild("そうた", "🐻");
+    await startWear(at("08:00"));
+    await deleteChild(sota.id, at("09:00"));
+    const s = (await db.sessions.where("childId").equals(sota.id).toArray())[0];
+    expect(s.endTime).toBe(new Date(at("09:00")).toISOString());
+    await restoreChild(sota.id);
+    expect((await listSessions()).filter((x) => !x.endTime)).toHaveLength(0);
+  });
+
+  it("同じアカウントで再ログインしても履歴をまるごと送り直さない", async () => {
+    const server = new FakeServer();
+    await adoptAuthUser(UID);
+    for (let i = 0; i < 5; i++) await addSession(at(`0${i}:00`), at(`0${i}:30`), at("12:00"));
+    await syncOnce(server, UID);
+    expect(await db.outbox.count()).toBe(0);
+    await markSignedOut();
+    await addSession(at("10:00"), at("10:30"), at("12:00")); // ログアウト中の記録
+    await adoptAuthUser(UID);
+    expect(await db.outbox.count()).toBe(1); // ログアウト中の1件だけ
+    expect((await getIdentity()).authenticated).toBe(true);
+  });
+});

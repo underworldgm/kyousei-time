@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppData } from "../app/AppData";
-import { dailySeries, summarize } from "../lib/stats";
+import { completedDays, dailySeries, summarize } from "../lib/stats";
 import { DAY_MS, dayStartMs, daysInMonth, entriesOnDay, fmtDuration, jstHM, monthKey, parseDayKey, weekdayOf, type DayEntry } from "../lib/time";
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
@@ -34,7 +34,7 @@ export function ReportPage() {
   const endKey = lastKey > todayKey ? todayKey : lastKey;
   const elapsed = endKey < monthKey(ym.y, ym.m, 1) ? 0 : parseDayKey(endKey).d;
   const days = elapsed ? dailySeries(intervals, endKey, elapsed, targetFor) : [];
-  const sum = summarize(days);
+  const sum = summarize(completedDays(days, todayKey));
   const isPreview = !!import.meta.env.VITE_PREVIEW;
 
   return (
@@ -102,7 +102,7 @@ export function ReportPage() {
           <div>
             <p>1日の平均</p>
             <strong>{fmtDuration(sum.averageMinutes)}</strong>
-            <span>記録のない日も0として計算</span>
+            <span>記録のない日も0として計算（途中の今日は除く）</span>
           </div>
           <div>
             <p>最長 / 最短</p>

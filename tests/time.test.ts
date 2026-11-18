@@ -211,3 +211,15 @@ describe("グラフ用の集計", () => {
     expect(w[0]).toMatchObject({ startKey: "2026-09-27", days: 7, averageMinutes: 0 });
   });
 });
+
+describe("まとめから途中の今日を除く", () => {
+  it("今日は達成していれば含め、未達成なら除く", async () => {
+    const { completedDays } = await import("../src/lib/stats");
+    const pts = [
+      { dayKey: "2026-10-06", minutes: 840, target: 840, achieved: true },
+      { dayKey: "2026-10-07", minutes: 60, target: 840, achieved: false },
+    ];
+    expect(completedDays(pts, "2026-10-07").map((p) => p.dayKey)).toEqual(["2026-10-06"]);
+    expect(completedDays([...pts.slice(0, 1), { ...pts[1], minutes: 900, achieved: true }], "2026-10-07")).toHaveLength(2);
+  });
+});

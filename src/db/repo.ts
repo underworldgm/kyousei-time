@@ -128,6 +128,13 @@ export function adoptAuthUser(uid: string): Promise<AdoptResult> {
 async function adoptAuthUserInner(uid: string): Promise<AdoptResult> {
   const cur = await getIdentity();
   if (cur.authenticated && cur.userId === uid) return { switched: false };
+  if (cur.userId === uid) {
+    // 同じアカウントで再ログイン: 記録はすでにこのアカウントのもの。付け替え・再送は不要 (未同期分は outbox に残っている)
+    await setMeta("identity", { ...cur, authenticated: true } satisfies Identity);
+    await ensureBootstrap();
+    emitWrite();
+    return { switched: false };
+  }
   // ログアウト済みでも、以前ログインしていたアカウントのデータは「別アカウント」のもの
   const foreign = cur.userId !== LOCAL_USER_ID && cur.userId !== uid;
   if (foreign && (await db.outbox.count()) > 0) return { switched: false, blocked: true };
@@ -239,7 +246,11 @@ export async function stopWear(now = Date.now()): Promise<OpResult | null> {
     let discarded = false;
     for (const s of active) {
       const start = Date.parse(s.startTime);
-      if (now - start < MIN_DURATION_MS) {
+      const elapsed = now - start;
+      if (elapsed < 0) {
+        // 別の端末の時計が進んでいて開始が「未来」になっている: 消さずに終わらせる (終了 > 開始 を保つ)
+        last = { ...s, endTime: nowIso(start + 1000), updatedAt: nowIso(now) };
+      } else if (elapsed < MIN_DURATION_MS) {
         // 開始直後の終了 (押しまちがい) は0分の記録を残さない。論理削除なので同期もされる
         last = { ...s, deletedAt: nowIso(now), updatedAt: nowIso(now) };
         discarded = true;
@@ -372,7 +383,13 @@ export async function deleteChild(childId: string, now = Date.now()): Promise<{ 
   const rest = all.filter((c) => c.id !== childId);
   if (!rest.length) return { ok: false, error: "最後の1人は削除できません" };
   const ts = nowIso(now);
-  await db.transaction("rw", [db.children, db.outbox, db.meta], async () => {
+  await db.transaction("rw", [db.children, db.sessions, db.outbox, db.meta], async () => {
+    // 装着中のまま隠すと、あとで戻したときに何日分もの「装着中」になるので、ここで終わらせる
+    for (const sess of await db.sessions.where("childId").equals(childId).toArray()) {
+      if (sess.endTime || sess.deletedAt) continue;
+      const short = now - Date.parse(sess.startTime) < MIN_DURATION_MS;
+      await writeRecord("sessions", short ? { ...sess, deletedAt: ts, updatedAt: ts } : { ...sess, endTime: nowIso(Math.max(now, Date.parse(sess.startTime) + 1000)), updatedAt: ts });
+    }
     await writeRecord("children", { ...target, deletedAt: ts, updatedAt: ts });
     if (id.childId === childId) await setMeta("identity", { ...id, childId: rest[0].id } satisfies Identity);
   });

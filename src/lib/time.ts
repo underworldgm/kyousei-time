@@ -193,6 +193,16 @@ export function entriesOnDay(sessions: WearSession[], dayKey: string, now: numbe
 
 // ---------------------------------------------------------------- targets
 
+export const TARGET_STEP_MINUTES = 30;
+export const MIN_TARGET_MINUTES = 60;
+export const MAX_TARGET_MINUTES = 24 * 60;
+
+/** 目標時間の「−」「＋」: 30分単位、1〜24時間 */
+export function stepTargetMinutes(minutes: number, dir: number): number {
+  const next = Math.round((minutes + dir * TARGET_STEP_MINUTES) / TARGET_STEP_MINUTES) * TARGET_STEP_MINUTES;
+  return Math.min(MAX_TARGET_MINUTES, Math.max(MIN_TARGET_MINUTES, next));
+}
+
 /** 目標時間: 固定値、または日ごとの目標 (目標変更の履歴) を返す関数 */
 export type TargetSpec = number | ((dayKey: string) => number);
 export const targetOn = (t: TargetSpec, dayKey: string): number => (typeof t === "number" ? t : t(dayKey));

@@ -32,9 +32,10 @@ test("装着中の開始時刻を直して終了 → 合計と残りが更新さ
   await expect(dlg.getByText("装着中のため")).toBeVisible();
   await dlg.getByLabel("開始時刻").fill(jstNowHM(-120));
   await dlg.getByRole("button", { name: "保存" }).click();
-  await expect(page.locator(".kv")).toContainText("2時間00分");
+  // テスト中に分の境目をまたぐことがあるので ±1分を許容
+  await expect(page.locator(".kv")).toContainText(/2時間0[01]分/);
   await page.getByRole("button", { name: "装着終了" }).click();
-  await expect(page.locator(".today-total")).toContainText("2時間00分");
+  await expect(page.locator(".today-total")).toContainText(/2時間0[01]分/);
   await expect(page.locator(".session-row")).toHaveCount(1);
 });
 

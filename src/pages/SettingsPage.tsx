@@ -15,9 +15,11 @@ import { ensurePermission, permissionState, showNotification } from "../lib/noti
 import { disablePush, enablePush, pushConfigured } from "../lib/push";
 import { getMeta, setMeta } from "../db/indexedDb";
 import { requestSync } from "../lib/sync";
-import { fmtDuration, jstHM, sessionsToCsv, dayKeyOf } from "../lib/time";
+import { fmtDuration, jstHM, sessionsToCsv, dayKeyOf, stepTargetMinutes } from "../lib/time";
+import { CHILD_ICONS } from "../lib/childIcons";
+import { cancelSchedules } from "../lib/push";
 
-export const ICONS = ["🦷", "🌟", "🐰", "🐱", "🐻"];
+const ICONS = CHILD_ICONS;
 
 function Switch({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
@@ -77,7 +79,7 @@ export function SettingsPage() {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   // 30分単位 (1〜24時間)
-  const step = (d: number) => setMinutes((m) => Math.min(24 * 60, Math.max(60, Math.round((m + d * 30) / 30) * 30)));
+  const step = (d: number) => setMinutes((m) => stepTargetMinutes(m, d));
 
   const toggleNotify = async (v: boolean) => {
     setNotify(v);
@@ -382,6 +384,8 @@ export function SettingsPage() {
                 toast({ text: r.error, ms: 4000 });
                 return;
               }
+              // クラウド通知を使っていれば、その子の通知予定も止める
+              if (pushOn && auth.session) void cancelSchedules(auth.session.user.id, target.id).catch(() => undefined);
               toast({
                 text: `${target.name || "子ども"}を削除しました`,
                 actionLabel: "元に戻す",

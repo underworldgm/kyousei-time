@@ -34,8 +34,9 @@ test("仮想時計: 装着中に目標達成 → 通知は1回 → 日付をま�
 
   await page.getByRole("link", { name: "時間" }).click();
   await page.getByRole("button", { name: "装着開始" }).click();
-  await expect(page.locator(".kv")).toContainText("22:30");
-  await expect(page.locator(".kv")).toContainText("23:30ごろ"); // 終了予定 = 開始 + 残り1時間
+  // 仮想時計はページ読み込み中も進むので、開始は 22:30〜22:31
+  await expect(page.locator(".kv")).toContainText(/22:3[01]/);
+  await expect(page.locator(".kv")).toContainText(/23:3[01]ごろ/); // 終了予定 = 開始 + 残り1時間
 
   await page.clock.fastForward(40 * 60_000);
   await expect(page.locator(".ring-big")).toHaveText("20分");
@@ -57,7 +58,7 @@ test("仮想時計: 装着中に目標達成 → 通知は1回 → 日付をま�
   await page.clock.fastForward(49 * 60_000);
   await expect(page.locator(".today-total")).toContainText("30分");
   await expect(page.locator(".ring-big")).toHaveText("30分");
-  await expect(page.locator(".session-row.active")).toContainText("前日 22:30");
+  await expect(page.locator(".session-row.active")).toContainText(/前日 22:3[01]/);
 
   await page.getByRole("button", { name: "装着終了" }).click();
   await expect(page.getByText("現在：外しています")).toBeVisible();

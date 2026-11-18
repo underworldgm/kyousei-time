@@ -78,3 +78,8 @@ export function summarize(points: DayPoint[]): SeriesSummary {
     shortest: by((a, b) => a.minutes < b.minutes),
   };
 }
+
+/** まとめ用: 今日はまだ途中なので、達成していなければ除く (朝に平均や達成率が下がって見えないように) */
+export function completedDays(points: DayPoint[], todayKey: string): DayPoint[] {
+  return points.filter((p) => p.dayKey !== todayKey || p.achieved);
+}

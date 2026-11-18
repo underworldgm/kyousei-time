@@ -188,10 +188,11 @@ export interface SyncResult {
 /** push → pull を1回実行 */
 export async function syncOnce(remote: Remote, userId: string): Promise<SyncResult> {
   const push = await pushOutbox(remote);
-  if (push.failed) return { ok: false, pushed: push.pushed, pulled: 0, error: push.error };
+  // 送れない記録が1件あっても、他の端末の記録は受け取れるように pull は必ず行う
+  // (送れなかった記録は outbox に残り、ローカルの方が新しければ pull で上書きされない)
   try {
     const pulled = await pullAll(remote, userId);
-    return { ok: true, pushed: push.pushed, pulled, error: null };
+    return { ok: !push.failed, pushed: push.pushed, pulled, error: push.failed ? push.error : null };
   } catch (e) {
     return { ok: false, pushed: push.pushed, pulled: 0, error: e instanceof Error ? e.message : String(e) };
   }
@@ -255,6 +256,7 @@ async function runSync(): Promise<void> {
       const r = await syncOnce(remoteImpl!, ident.userId);
       await refreshPending();
       if (r.ok) {
+        retryMs = 5_000;
         const at = new Date().toISOString();
         await setMeta("lastSyncedAt", at).catch(() => undefined);
         setState({ phase: "idle", lastSyncedAt: at, error: null });

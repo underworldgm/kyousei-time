@@ -13,7 +13,7 @@ test("グラフ: 期間の切り替え・棒をタップして詳細・最近7�
 
   await page.getByRole("link", { name: "グラフ" }).click();
   await expect(page.getByRole("heading", { name: "7日間の装着時間" })).toBeVisible();
-  await expect(page.locator(".stat-grid")).toContainText("2 / 7");
+  await expect(page.locator(".stat-grid")).toContainText("2 / 6"); // 途中の今日は除く
   await expect(page.locator(".stat-grid")).toContainText("15時間00分"); // いちばん長い日
   await expect(page.locator(".stat-grid")).toContainText("12時間00分"); // いちばん短い日
   await expect(page.locator(".recent-table tbody tr")).toHaveCount(7);

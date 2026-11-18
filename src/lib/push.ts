@@ -72,3 +72,11 @@ export async function uploadSchedules(userId: string, schedules: PushSchedule[])
   const { error } = await supabase.from("push_schedules").upsert(rows, { onConflict: "child_id,kind" });
   if (error) throw new Error(error.message);
 }
+
+/** 子どもを削除したときなど、その子の送信予定 (目標達成・リマインダー) をすべて取り消す */
+export async function cancelSchedules(userId: string, childId: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from("push_schedules").update({ send_at: null, updated_at: new Date().toISOString() }).eq("child_id", childId);
+  if (error) throw new Error(error.message);
+  void userId;
+}

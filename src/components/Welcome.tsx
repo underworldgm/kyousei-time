@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useAppData } from "../app/AppData";
 import { saveChild, saveSettings } from "../db/repo";
 import { ensurePermission } from "../lib/notifications";
-import { fmtDuration } from "../lib/time";
+import { fmtDuration, stepTargetMinutes } from "../lib/time";
+import { CHILD_ICONS } from "../lib/childIcons";
 import { useDialog } from "./Dialogs";
 import { Mascot } from "./Mascot";
 
 const KEY = "kyousei-onboarded";
-const ICONS = ["🦷", "🌟", "🐰", "🐱", "🐻"];
 
 function onboarded(): boolean {
   try {
@@ -39,7 +39,7 @@ export function Welcome() {
   const [minutes, setMinutes] = useState(840);
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
-  const step = (d: number) => setMinutes((m) => Math.min(24 * 60, Math.max(60, m + d * 30)));
+  const step = (d: number) => setMinutes((m) => stepTargetMinutes(m, d));
 
   if (!fresh) return null;
   return (
@@ -71,7 +71,7 @@ export function Welcome() {
           <input type="text" value={name} maxLength={12} placeholder="例: みなちゃん" onChange={(e) => setName(e.target.value)} />
         </label>
         <div className="icon-pick" role="radiogroup" aria-label="アイコン">
-          {ICONS.map((ic) => (
+          {CHILD_ICONS.map((ic) => (
             <button key={ic} type="button" role="radio" aria-checked={icon === ic} className={icon === ic ? "on" : ""} onClick={() => setIcon(ic)} aria-label={`アイコン ${ic}`}>
               {ic}
             </button>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAppData } from "../app/AppData";
 import { Hero } from "../components/Hero";
-import { dailySeries, summarize, weeklySeries, type DayPoint, type WeekPoint } from "../lib/stats";
+import { completedDays, dailySeries, summarize, weeklySeries, type DayPoint, type WeekPoint } from "../lib/stats";
 import { fmtDuration, parseDayKey, weekdayOf } from "../lib/time";
 
 const WEEK = ["日", "月", "火", "水", "木", "金", "土"];
@@ -137,7 +137,7 @@ export function StatsPage() {
   const days = useMemo(() => dailySeries(intervals, todayKey, range === "week" ? 7 : range === "month" ? 30 : 91, targetFor), [intervals, todayKey, range, targetFor]);
   const weeks = useMemo(() => weeklySeries(intervals, todayKey, 13, targetFor), [intervals, todayKey, targetFor]);
   const bars = toBars(range, days, weeks);
-  const sum = summarize(days);
+  const sum = summarize(completedDays(days, todayKey));
   const recent = dailySeries(intervals, todayKey, 7, targetFor).slice().reverse();
   const sel = bars.find((b) => b.key === selected) ?? null;
   const maxRecent = Math.max(...recent.map((p) => Math.max(p.minutes, p.target)), 1);
@@ -205,7 +205,7 @@ export function StatsPage() {
           <div className="card mini">
             <p className="mini-label">1日の平均</p>
             <p className="mini-val small">{fmtDuration(sum.averageMinutes)}</p>
-            <p className="mini-sub">記録のない日も0として計算</p>
+            <p className="mini-sub">記録のない日も0として計算（途中の今日は除く）</p>
           </div>
           <div className="card mini">
             <p className="mini-label">いちばん長い日</p>
