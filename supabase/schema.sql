@@ -163,3 +163,5 @@ end $$;
 revoke all on public.push_subscriptions, public.push_schedules from anon;
 grant select, insert, update, delete on public.push_subscriptions, public.push_schedules to authenticated;
 -- 送信は Edge Function (service_role) が行う。service_role は RLS の対象外。
+-- 子どもの削除 (論理削除)。記録は消さずに残し、一覧から見えなくする
+alter table public.children add column if not exists deleted_at timestamptz;

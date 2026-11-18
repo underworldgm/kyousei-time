@@ -312,3 +312,43 @@ describe("複数の子ども", () => {
     expect(await db.settings.count()).toBe(2);
   });
 });
+
+describe("削除の取り消し", () => {
+  it("元に戻せる / 重なる記録があれば戻さない / 同期にも反映", async () => {
+    const { restoreSession } = await import("../src/db/repo");
+    await adoptAuthUser(UID);
+    const server = new FakeServer();
+    const r = await addSession(at("08:00"), at("09:00"), at("10:00"));
+    if (!r.ok) throw new Error();
+    await deleteSession(r.session.id, at("10:01"));
+    expect(await listSessions()).toHaveLength(0);
+    expect((await restoreSession(r.session.id, at("10:02"))).ok).toBe(true);
+    expect(await listSessions()).toHaveLength(1);
+    await syncOnce(server, UID);
+    expect(server.tables.sessions.get(r.session.id)!.deleted_at).toBeNull();
+
+    await deleteSession(r.session.id, at("10:03"));
+    await addSession(at("08:30"), at("09:30"), at("10:04"));
+    const again = await restoreSession(r.session.id, at("10:05"));
+    expect(again.ok).toBe(false);
+    expect(await listSessions()).toHaveLength(1);
+  });
+});
+
+describe("子どもの削除", () => {
+  it("論理削除で一覧から消え、表示中なら別の子へ。最後の1人は消せない。元に戻せる", async () => {
+    const { addChild, deleteChild, restoreChild, listChildren } = await import("../src/db/repo");
+    const first = (await getIdentity()).childId;
+    const sota = await addChild("そうた", "🐻");
+    await addSession(at("08:00"), at("09:00"), at("10:00"));
+    expect((await deleteChild(sota.id)).ok).toBe(true);
+    expect((await listChildren()).map((c) => c.id)).toEqual([first]);
+    expect((await getIdentity()).childId).toBe(first);
+    expect(await deleteChild(first)).toEqual({ ok: false, error: "最後の1人は削除できません" });
+    expect(await db.sessions.where("childId").equals(sota.id).count()).toBe(1); // 記録は残る
+    await restoreChild(sota.id);
+    expect((await listChildren()).map((c) => c.name)).toEqual(["", "そうた"]);
+    expect((await getIdentity()).childId).toBe(sota.id);
+    expect(await listSessions()).toHaveLength(1);
+  });
+});

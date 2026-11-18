@@ -4,7 +4,7 @@ import { validateRange } from "../lib/validation";
 import { dayKeyOf, fmtDuration, fromJst, jstHM, MIN_MS } from "../lib/time";
 import type { WearSession } from "../types";
 
-function useDialog(open: boolean, onClose: () => void) {
+export function useDialog(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;

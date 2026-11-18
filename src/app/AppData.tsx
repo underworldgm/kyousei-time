@@ -41,7 +41,7 @@ async function loadSnapshot(): Promise<Snapshot> {
   return {
     identity,
     child: child ?? null,
-    children: children.filter((c) => c.userId === identity.userId).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    children: children.filter((c) => c.userId === identity.userId && !c.deletedAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     settings: settings ?? null,
     sessions: all.filter((s) => !s.deletedAt),
   };

@@ -69,6 +69,13 @@ test("手動追加・編集・削除 (確認あり) で合計が再計算され�
   await page.locator(".session-row").first().getByRole("button", { name: /削除/ }).click();
   await page.getByRole("button", { name: "削除する" }).click();
   await expect(page.locator(".session-row")).toHaveCount(1);
+  // 削除直後は「元に戻す」で取り消せる
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(page.getByText("元に戻しました")).toBeVisible();
+  await expect(page.locator(".session-row")).toHaveCount(2);
+  await page.locator(".session-row").first().getByRole("button", { name: /削除/ }).click();
+  await page.getByRole("button", { name: "削除する" }).click();
+  await expect(page.locator(".session-row")).toHaveCount(1);
   await expect(page.locator(".today-total")).toContainText("1時間00分");
   await page.reload();
   await expect(page.locator(".today-total")).toContainText("1時間00分");

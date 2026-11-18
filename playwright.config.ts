@@ -16,6 +16,11 @@ export default defineConfig({
     locale: "ja-JP",
     timezoneId: "America/New_York", // 端末TZが日本以外でも JST で集計されることも確認
     trace: "retain-on-failure",
+    // はじめての案内は専用テスト (e2e/welcome.spec.ts) で確認し、他のテストでは出さない
+    storageState: {
+      cookies: [],
+      origins: ["http://localhost:4173", "http://localhost:4174"].map((origin) => ({ origin, localStorage: [{ name: "kyousei-onboarded", value: "1" }] })),
+    },
     ...(process.env.PW_CHROMIUM_PATH ? { launchOptions: { executablePath: process.env.PW_CHROMIUM_PATH } } : {}),
   },
   projects: [

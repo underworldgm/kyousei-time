@@ -89,4 +89,14 @@ test("子どもを追加して切り替えると、記録はそれぞれ別に�
   await expect(page.getByText("現在：装着中")).toBeVisible();
   await page.reload();
   await expect(page.locator(".hero-sub")).toContainText("みなの"); // 選択は端末に保存
+
+  // そうたを削除 → 元に戻す
+  await page.getByLabel("表示する子どもを切り替える").selectOption({ label: "🐻 そうた" });
+  await page.getByRole("link", { name: "設定" }).click();
+  await page.getByRole("button", { name: "そうたを一覧から削除" }).click();
+  await page.getByRole("button", { name: "削除する" }).click();
+  await expect(page.locator(".hero-sub")).toContainText("みなの");
+  await expect(page.locator(".child-switch")).toHaveCount(0); // 1人になったので切り替えは出ない
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(page.locator(".hero-sub")).toContainText("そうたの");
 });

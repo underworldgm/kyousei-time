@@ -357,7 +357,40 @@ export async function importIntervals(list: { start: number; end: number }[], no
 
 export async function listChildren(): Promise<Child[]> {
   const id = await getIdentity();
-  return (await db.children.toArray()).filter((c) => c.userId === id.userId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  return (await db.children.toArray()).filter((c) => c.userId === id.userId && !c.deletedAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/**
+ * 子どもを削除する (論理削除)。最後の1人は削除できない。
+ * 表示中の子を削除したら、残っている子に切り替える。記録は消さないので restoreChild で戻せる。
+ */
+export async function deleteChild(childId: string, now = Date.now()): Promise<{ ok: true } | { ok: false; error: string }> {
+  const id = await getIdentity();
+  const all = await listChildren();
+  const target = all.find((c) => c.id === childId);
+  if (!target) return { ok: false, error: "見つかりません" };
+  const rest = all.filter((c) => c.id !== childId);
+  if (!rest.length) return { ok: false, error: "最後の1人は削除できません" };
+  const ts = nowIso(now);
+  await db.transaction("rw", [db.children, db.outbox, db.meta], async () => {
+    await writeRecord("children", { ...target, deletedAt: ts, updatedAt: ts });
+    if (id.childId === childId) await setMeta("identity", { ...id, childId: rest[0].id } satisfies Identity);
+  });
+  await ensureBootstrap();
+  emitWrite();
+  return { ok: true };
+}
+
+export async function restoreChild(childId: string, now = Date.now()): Promise<void> {
+  const c = await db.children.get(childId);
+  if (!c || !c.deletedAt) return;
+  const id = await getIdentity();
+  await db.transaction("rw", [db.children, db.outbox, db.meta], async () => {
+    await writeRecord("children", { ...c, deletedAt: null, updatedAt: nowIso(now) });
+    await setMeta("identity", { ...id, childId } satisfies Identity);
+  });
+  await ensureBootstrap();
+  emitWrite();
 }
 
 /** 子どもを追加して、その子に切り替える */
@@ -396,6 +429,23 @@ export async function switchChild(childId: string): Promise<void> {
   await setMeta("identity", { ...id, childId } satisfies Identity);
   await ensureBootstrap();
   emitWrite();
+}
+
+/** 削除の取り消し (論理削除を元に戻す)。その間に重なる記録が追加されていたら戻さない */
+export async function restoreSession(sessionId: string, now = Date.now()): Promise<OpResult> {
+  const existing = await db.sessions.get(sessionId);
+  if (!existing) return { ok: false, error: "記録が見つかりません" };
+  if (!existing.deletedAt) return { ok: true, session: existing };
+  const others = await listSessions();
+  if (!existing.endTime && others.some((s) => !s.endTime)) return { ok: false, error: "いま装着中の記録があるため元に戻せません" };
+  const start = Date.parse(existing.startTime);
+  const end = existing.endTime ? Date.parse(existing.endTime) : null;
+  const check = validateRange(start, end, Math.max(now, end ?? now), others, existing.id);
+  if (!check.ok) return { ok: false, error: check.error === "ほかの装着記録と時間が重なっています" ? "ほかの記録と重なるため元に戻せません" : check.error };
+  const next: WearSession = { ...existing, deletedAt: null, updatedAt: nowIso(now) };
+  await db.transaction("rw", [db.sessions, db.outbox], () => writeRecord("sessions", next));
+  emitWrite();
+  return { ok: true, session: next };
 }
 
 // ---------------------------------------------------------------- settings / child

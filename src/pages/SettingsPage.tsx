@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppData } from "../app/AppData";
 import { Hero } from "../components/Hero";
+import { ConfirmDialog } from "../components/Dialogs";
+import { useToast } from "../components/Toast";
 import { RewardStamp, STAMP_KINDS, STAMP_NAMES } from "../components/RewardStamp";
 import { useAuth } from "../hooks/useAuth";
 import { useInstall } from "../hooks/useInstall";
 import { useSyncState } from "../hooks/useSyncState";
-import { addChild, clearSampleData, importIntervals, saveChild, saveSettings, seedSampleData, switchChild, withSettingDefaults } from "../db/repo";
+import { addChild, deleteChild, restoreChild, clearSampleData, importIntervals, saveChild, saveSettings, seedSampleData, switchChild, withSettingDefaults } from "../db/repo";
 import { parseSessionsCsv } from "../lib/csv";
 import { cloudConfigured } from "../lib/supabase";
 import { ensurePermission, permissionState, showNotification } from "../lib/notifications";
@@ -15,7 +17,7 @@ import { getMeta, setMeta } from "../db/indexedDb";
 import { requestSync } from "../lib/sync";
 import { fmtDuration, jstHM, sessionsToCsv, dayKeyOf } from "../lib/time";
 
-const ICONS = ["🦷", "🌟", "🐰", "🐱", "🐻"];
+export const ICONS = ["🦷", "🌟", "🐰", "🐱", "🐻"];
 
 function Switch({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
@@ -34,6 +36,8 @@ function Switch({ checked, onChange, label, disabled = false }: { checked: boole
 export function SettingsPage() {
   const { settings, child, children, sessions, now, targetMinutes, targetFor, identity } = useAppData();
   const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const toast = useToast();
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("🐻");
   const [minutes, setMinutes] = useState(settings?.dailyTargetMinutes ?? targetMinutes);
@@ -319,6 +323,11 @@ export function SettingsPage() {
               </button>
             ))}
           </div>
+          {children.length > 1 && (
+            <button type="button" className="btn outline-coral wide remove-child-btn" onClick={() => setRemoving(true)}>
+              {child?.name || "この子"}を一覧から削除
+            </button>
+          )}
           {adding ? (
             <form
               className="add-child"
@@ -359,6 +368,30 @@ export function SettingsPage() {
             </button>
           )}
           <p className="hint small">記録・目標・スタンプは子どもごとに別々に保存されます。</p>
+          <ConfirmDialog
+            open={removing}
+            title={`${child?.name || "この子"}を削除しますか？`}
+            body={<p>一覧と切り替えから消えます。装着記録は消さずに保存されるので、直後なら「元に戻す」で戻せます。</p>}
+            onClose={() => setRemoving(false)}
+            onConfirm={async () => {
+              setRemoving(false);
+              if (!child) return;
+              const target = child;
+              const r = await deleteChild(target.id);
+              if (!r.ok) {
+                toast({ text: r.error, ms: 4000 });
+                return;
+              }
+              toast({
+                text: `${target.name || "子ども"}を削除しました`,
+                actionLabel: "元に戻す",
+                action: async () => {
+                  await restoreChild(target.id);
+                  toast({ text: "元に戻しました", ms: 3000 });
+                },
+              });
+            }}
+          />
         </section>
 
         <button type="button" className="btn-main mint save" onClick={() => void save()}>

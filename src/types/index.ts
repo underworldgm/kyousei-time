@@ -19,6 +19,8 @@ export interface Child extends LocalMeta {
   name: string;
   /** 絵文字などのアイコン */
   icon: string;
+  /** 論理削除 (記録は残す)。古いデータでは未定義 */
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

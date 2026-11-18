@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { deleteSession } from "../db/repo";
+import { deleteSession, restoreSession } from "../db/repo";
+import { useToast } from "./Toast";
 import { entriesOnDay, type DayEntry } from "../lib/time";
 import type { WearSession } from "../types";
 import { ConfirmDialog, SessionEditor } from "./Dialogs";
@@ -20,6 +21,7 @@ export function DayRecords({ sessions, dayKey, now, emptyText = "まだ記録が
   const [editing, setEditing] = useState<WearSession | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleting, setDeleting] = useState<DayEntry["session"] | null>(null);
+  const toast = useToast();
 
   const openEdit = (e: DayEntry) => {
     setEditing(e.session);
@@ -66,8 +68,18 @@ export function DayRecords({ sessions, dayKey, now, emptyText = "まだ記録が
         body={<p>削除すると、その日の合計や達成の判定も更新されます。</p>}
         onClose={() => setDeleting(null)}
         onConfirm={async () => {
-          if (deleting) await deleteSession(deleting.id);
+          const target = deleting;
           setDeleting(null);
+          if (target && (await deleteSession(target.id))) {
+            toast({
+              text: "装着記録を削除しました",
+              actionLabel: "元に戻す",
+              action: async () => {
+                const r = await restoreSession(target.id);
+                toast({ text: r.ok ? "元に戻しました" : r.error, ms: 4000 });
+              },
+            });
+          }
         }}
       />
     </>

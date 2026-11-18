@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { BrowserRouter, MemoryRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { PreviewBanner } from "../components/PreviewBanner";
+import { ToastProvider } from "../components/Toast";
+import { Welcome } from "../components/Welcome";
+import { switchChild } from "../db/repo";
 import { AppDataProvider, useAppData } from "./AppData";
 import { NavBar } from "../components/NavBar";
 import { CalendarPage } from "../pages/CalendarPage";
@@ -29,6 +32,11 @@ function Shell() {
   useReminder(data);
   useAppBadge(data);
   usePushSchedules(data);
+  const deletedActive = !!data.child?.deletedAt;
+  const fallbackChild = data.children[0]?.id;
+  useEffect(() => {
+    if (deletedActive && fallbackChild) void switchChild(fallbackChild);
+  }, [deletedActive, fallbackChild]);
   if (data.error) {
     return (
       <div className="fatal" role="alert">
@@ -56,6 +64,7 @@ function Shell() {
         </Routes>
       </div>
       {!isReport && <NavBar />}
+      {!isReport && <Welcome />}
     </>
   );
 }
@@ -69,7 +78,9 @@ export function App() {
       <div className="app">
         <AuthProvider>
           <AppDataProvider>
-            <Shell />
+            <ToastProvider>
+              <Shell />
+            </ToastProvider>
           </AppDataProvider>
         </AuthProvider>
       </div>
